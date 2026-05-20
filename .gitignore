@@ -37,20 +37,20 @@ ios/
 .ipynb_checkpoints/
 
 # --- AI 모델 / 데이터셋 (용량 큼) ---
-backend/app/models/
-backend/app/data/
-*.pt
-*.pth
+# backend/app/models/
+# backend/app/data/
+# *.pt
+# *.pth
 *.onnx
 *.h5
 *.ckpt
 
 # --- 로그 / DB ---
 *.log
-*.db
+# *.db
 *.sqlite
 *.sqlite3
-backend/test.db
+# backend/test.db
 backend/uvicorn.log
 frontend/vite.log
 
