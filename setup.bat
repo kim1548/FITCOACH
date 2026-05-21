@@ -11,11 +11,11 @@ echo ===== FITCOACH 초기 셋업을 시작합니다 =====
 echo (처음 한 번만 실행. 10~15분 소요)
 echo.
 
-REM --- [점검 1/2] Python 3.10 ---
-py -3.10 --version >nul 2>&1
+REM --- [점검 1/2] Python 3.13 ---
+py -3.13 --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python 3.10 이 설치되어 있지 않습니다.
-    echo https://www.python.org/downloads/release/python-31011/ 에서 설치하세요.
+    echo [ERROR] Python 3.13 이 설치되어 있지 않습니다.
+    echo https://www.python.org/downloads/ 에서 설치하세요.
     echo 설치 시 "Add Python to PATH" 체크 필수.
     pause
     exit /b 1
@@ -30,7 +30,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [확인] Python 3.10 / Node.js OK
+echo [확인] Python 3.13 / Node.js OK
 echo.
 
 REM --- [1/4] backend venv 생성 ---
@@ -39,7 +39,7 @@ if exist "backend\venv\Scripts\python.exe" (
     echo       이미 존재. 건너뜁니다.
 ) else (
     pushd backend
-    py -3.10 -m venv venv
+    py -3.13 -m venv venv
     popd
 )
 

@@ -25,10 +25,10 @@
 | 도구 | 버전 | 다운로드 |
 |---|---|---|
 | Git | 최신 | https://git-scm.com |
-| **Python** | **3.10 (필수)** | https://www.python.org/downloads/release/python-31011/ |
+| **Python** | **3.13 (필수)** | https://www.python.org/downloads/ |
 | Node.js | LTS v18+ | https://nodejs.org |
 
-> ⚠️ Python은 **반드시 3.10**. 3.11/3.12에서는 `torch`·`ultralytics` 등 ML 패키지 충돌.
+> ⚠️ Python은 **3.13 권장** (개발 환경 3.13~3.14). `torch 2.11`·`torchvision 0.26` 등 핀된 패키지가 Python 3.11 이상을 요구하므로, 3.10 이하에서는 설치 단계에서 실패합니다.
 
 ### 2️⃣ 저장소 클론
 
@@ -56,8 +56,8 @@ cd FITCOACH
 cd backend
 
 # 가상환경 생성
-py -3.10 -m venv venv               # Windows
-python3.10 -m venv venv             # macOS/Linux
+py -3.13 -m venv venv               # Windows
+python3.13 -m venv venv             # macOS/Linux
 
 # 가상환경 활성화
 .\venv\Scripts\activate              # Windows
@@ -96,7 +96,7 @@ npm run dev                          # Vite 개발 서버 (포트 5173)
 | `start.bat` | **매번 실행** — 백엔드·프론트 동시 가동 + 브라우저 자동 오픈 | 약 8초 |
 
 **전제 조건:**
-- Python 3.10 / Node.js 가 PC에 미리 설치되어 있어야 함 (사전 요건 [1] 참고)
+- Python 3.13 / Node.js 가 PC에 미리 설치되어 있어야 함 (사전 요건 [1] 참고)
 - ML 모델·데이터는 `setup.bat` 실행 전에 [3]번 위치에 미리 복사해두기 (없어도 셋업 자체는 진행됨)
 
 두 파일 모두 `%~dp0` 기반이라 폴더 위치가 어디든 그대로 동작합니다. 경로 수정 불필요.
@@ -152,7 +152,7 @@ FITCOACH/
 → 백엔드가 `:8001`에서 안 떴거나, frontend의 Vite proxy 설정이 깨짐. 양쪽 터미널 로그 확인.
 
 **`torch` 설치 너무 느림 / 실패**
-→ Python 3.10 인지 확인. `pip install torch --index-url https://download.pytorch.org/whl/cpu` (CPU 버전).
+→ Python 3.13 인지 확인. `pip install torch --index-url https://download.pytorch.org/whl/cpu` (CPU 버전).
 
 **브라우저에서 `localhost:5173` 안 열림**
 → Vite 로그에서 실제 포트 확인 (5173이 점유 중이면 5174로 자동 변경).
