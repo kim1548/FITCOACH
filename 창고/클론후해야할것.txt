@@ -35,3 +35,13 @@ cd frontend
 0.0.0.0: "전 세계 누구나 들어와!" (매우 위험)
 192.168.x.x: "같은 와이파이 쓰는 사람만 들어와!" (공부용/테스트용 적당)
 127.0.0.1 또는 localhost: "나 혼자만 쓸 거야!" (가장 안전)
+
+# requirements.txt 에 맥과 윈도우 구분해야 할것
+# Windows 환경 (CPU 전용 주소 지정)
+torch==2.11.0+cpu ; sys_platform == 'win32' --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.26.0+cpu ; sys_platform == 'win32' --extra-index-url https://download.pytorch.org/whl/cpu
+torchaudio==2.11.0+cpu ; sys_platform == 'win32' --extra-index-url https://download.pytorch.org/whl/cpu
+# macOS 환경 (순정 버전 설치)
+torch==2.11.0 ; sys_platform == 'darwin'
+torchvision==0.26.0 ; sys_platform == 'darwin'
+torchaudio==2.11.0 ; sys_platform == 'darwin'

@@ -93,9 +93,14 @@ stack-data==0.6.3
 starlette==1.0.0
 sympy==1.14.0
 tinycss2==1.4.0
-torch==2.11.0+cpu
-torchaudio==2.11.0+cpu
-torchvision==0.26.0+cpu
+# Windows 환경 (CPU 전용 주소 지정)
+torch==2.11.0+cpu ; sys_platform == 'win32' --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.26.0+cpu ; sys_platform == 'win32' --extra-index-url https://download.pytorch.org/whl/cpu
+torchaudio==2.11.0+cpu ; sys_platform == 'win32' --extra-index-url https://download.pytorch.org/whl/cpu
+# macOS 환경 (순정 버전 설치)
+torch==2.11.0 ; sys_platform == 'darwin'
+torchvision==0.26.0 ; sys_platform == 'darwin'
+torchaudio==2.11.0 ; sys_platform == 'darwin'
 tornado==6.5.5
 traitlets==5.15.0
 typing-inspection==0.4.2
