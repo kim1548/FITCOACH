@@ -97,7 +97,7 @@ class FeedbackRequest(BaseModel):
     food_data: str = ""
     type: str = "DEFAULT"  # 👈 이렇게 기본값을 주면 에러(422)를 방지할 수 있습니다.
 
-@app.post("/ai-feedback")
+@app.post("/api/v1/ai-feedback")
 async def get_feedback(data: FeedbackRequest):  # data 객체로 받음
     # 1. 페이지 타입별 프롬프트 사전(Dictionary) 정의
     prompts = {
