@@ -2,13 +2,9 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import {
-  X, Activity, Utensils, MessageSquare, Save, Pencil, RefreshCw, Loader2, Sparkles,
+  X, Activity, Utensils, Save, Pencil, Loader2,
 } from 'lucide-react';
 import NutritionProgressRow from './NutritionProgressRow';
-
-// Ollama + gemma3:4b 가 로컬에 깔리고 동작 검증되면 true로 바꾼다.
-// false 동안에도 과거에 생성돼 DB 에 남아있는 ai_comment 는 그대로 보여준다.
-const AI_ENABLED = false;
 
 const authHeaders = () => {
   const token = localStorage.getItem('token');
@@ -33,7 +29,6 @@ const JournalDayModal = ({ date, theme, nutrition, onClose, onAfterChange }) => 
   const [noteDraft, setNoteDraft] = useState('');
   const [noteEditing, setNoteEditing] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -50,8 +45,6 @@ const JournalDayModal = ({ date, theme, nutrition, onClose, onAfterChange }) => 
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [date]);
-
-  const hasAnyData = data && (data.workout || data.diet);
 
   const handleSaveNote = async () => {
     setSavingNote(true);
@@ -71,22 +64,6 @@ const JournalDayModal = ({ date, theme, nutrition, onClose, onAfterChange }) => 
     }
   };
 
-  const handleRegenerate = async () => {
-    setRegenerating(true);
-    try {
-      const res = await axios.post(
-        `${API_BASE_URL}/journal/${date}/regenerate`,
-        {},
-        { headers: authHeaders() },
-      );
-      setData(d => ({ ...d, ai_comment: res.data.ai_comment, ai_generated_at: res.data.ai_generated_at }));
-      onAfterChange?.();
-    } catch (err) {
-      setError(err?.response?.data?.detail || 'AI 코멘트 생성에 실패했습니다.');
-    } finally {
-      setRegenerating(false);
-    }
-  };
 
   return (
     <div
@@ -231,54 +208,6 @@ const JournalDayModal = ({ date, theme, nutrition, onClose, onAfterChange }) => 
                   </div>
                 ) : (
                   <p className={`text-sm ${subText}`}>이 날 식단 기록이 없어요.</p>
-                )}
-              </section>
-
-              {/* AI 코멘트 */}
-              <section>
-                <div className="flex items-center gap-2 mb-3 text-blue-500">
-                  <MessageSquare size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">AI 코멘트</span>
-                </div>
-                {data.ai_comment ? (
-                  <div className={`p-4 rounded-2xl ${sectionBg} border border-blue-500/20`}>
-                    <p className="text-sm leading-relaxed italic">{data.ai_comment}</p>
-                    {AI_ENABLED && (
-                      <div className="mt-3 flex items-center justify-end">
-                        <button
-                          onClick={handleRegenerate}
-                          disabled={regenerating}
-                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'} disabled:opacity-50`}
-                        >
-                          {regenerating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                          다시 생성
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : AI_ENABLED ? (
-                  hasAnyData ? (
-                    <button
-                      onClick={handleRegenerate}
-                      disabled={regenerating}
-                      className={`w-full p-4 rounded-2xl border border-dashed ${isDark ? 'border-white/10 hover:bg-white/5' : 'border-slate-300 hover:bg-slate-50'} text-sm flex items-center justify-center gap-2 disabled:opacity-50`}
-                    >
-                      {regenerating ? (
-                        <><Loader2 size={16} className="animate-spin" /> 생성 중... (약 8초)</>
-                      ) : (
-                        <><RefreshCw size={16} /> AI 코멘트 생성</>
-                      )}
-                    </button>
-                  ) : (
-                    <p className={`text-sm ${subText}`}>코멘트할 데이터가 없어요.</p>
-                  )
-                ) : (
-                  <div className={`p-4 rounded-2xl ${sectionBg} flex items-center gap-3`}>
-                    <Sparkles size={18} className="text-blue-400 flex-shrink-0" />
-                    <p className={`text-sm leading-relaxed ${subText}`}>
-                      AI 코멘트 기능은 준비 중입니다. 로컬 AI 모델 연결 후 활성화될 예정이에요.
-                    </p>
-                  </div>
                 )}
               </section>
 
