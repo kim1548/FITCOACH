@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { API_BASE_URL } from '../api/config';
 import {
   ChevronLeft, Check, CheckCheck, Clock, Pause, Play, SkipForward,
   Plus, Minus, Video, Flame, Trophy,
@@ -267,6 +269,28 @@ const ProgramPlayPage = ({ theme }) => {
     catch { history = []; }
     history.push(historyEntry);
     localStorage.setItem('fiteating.program.history', JSON.stringify(history));
+
+    // 로그인 상태면 백엔드 DB에도 세션 기록을 보낸다 (실패해도 무시 — localStorage가 우선).
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.post(
+        `${API_BASE_URL}/routine/log`,
+        {
+          date: historyEntry.date,
+          workout: historyEntry.workout,
+          workout_label: historyEntry.workoutLabel,
+          duration_sec: historyEntry.durationSec,
+          lifts: historyEntry.lifts.map(l => ({
+            lift_id: l.liftId,
+            anchor_key: l.anchorKey,
+            weight: l.weight,
+            prev_weight: l.prevWeight,
+            outcome: l.outcome,
+          })),
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      ).catch(() => {});
+    }
 
     const updated = {
       ...programState,

@@ -7,8 +7,10 @@ import math
 
 from app.database import get_db
 from app.models.routine_log import UserRoutineStats, RoutineLog
+from app.models.user import User
 from app.schemas.routine import DailyPlanResponse, RoutineStatUpdate, RoutineStatResponse
 from app.services.routine_calculator import RoutineCalculator
+from app.api.v1.endpoints.auth import get_current_user
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -187,3 +189,48 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         # 서버 에러 시 500을 내뱉는 대신 에러 메시지 확인
         print(f"대시보드 에러 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- 프로그램 페이지(/program)에서 완료한 운동 세션을 DB에 저장 ---
+
+class LiftEntry(BaseModel):
+    lift_id: str
+    anchor_key: str
+    weight: float
+    prev_weight: float
+    outcome: str = ""
+
+class RoutineLogCreate(BaseModel):
+    date: str
+    workout: str
+    workout_label: str
+    duration_sec: int
+    lifts: List[LiftEntry]
+
+@router.post("/log")
+def create_routine_log(
+    data: RoutineLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """프론트 program 페이지의 완료된 운동 세션을 로그인 유저 계정에 저장합니다."""
+    # 프론트가 보내는 ISO 문자열을 naive datetime으로 변환 (DB의 다른 시각 컬럼과 동일하게)
+    try:
+        dt = datetime.fromisoformat(data.date.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone().replace(tzinfo=None)
+    except ValueError:
+        dt = datetime.now()
+
+    new_log = RoutineLog(
+        user_id=current_user.id,
+        routine_name=data.workout_label or data.workout,
+        workout_date=dt,
+        session_data=[lift.model_dump() for lift in data.lifts],
+        total_volume=0.0,
+        memo=None,
+    )
+    db.add(new_log)
+    db.commit()
+    db.refresh(new_log)
+    return {"status": "success", "log_id": new_log.id}
