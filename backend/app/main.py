@@ -10,13 +10,19 @@ from app.models.diet_log import DietLog
 from app.models.exercise_log import WorkoutLog
 from app.models.journal_entry import JournalEntry  # noqa: F401  (테이블 자동 생성용)
 from app.models.inbody_log import InBodyLog  # noqa: F401  (테이블 자동 생성용)
+from app.models.community import (  # noqa: F401  (테이블 자동 생성용)
+    CommunityPost, CommunityLike, CommunityComment,
+)
 # 기존 라우터들
 from app.api.v1.endpoints import exercise, diet, auth
 
 from pydantic import BaseModel  # 추가
 import httpx
 from fastapi.staticfiles import StaticFiles
-from app.api.v1.endpoints import routine, journal, user as user_endpoint, body as body_endpoint
+from app.api.v1.endpoints import (
+    routine, journal, user as user_endpoint, body as body_endpoint,
+    community as community_endpoint,
+)
 from sqlalchemy import inspect, text
 
 app = FastAPI()
@@ -55,7 +61,25 @@ def _ensure_users_age_column():
         print("✅ users.age 컬럼 추가됨 (기존 유저는 NULL)")
 
 
+def _ensure_inbody_ai_columns():
+    """create_all 후에도 기존 inbody_logs 테이블엔 ai_comment / ai_generated_at 이
+    없을 수 있어 한 번만 ALTER TABLE 로 채워준다."""
+    inspector = inspect(engine)
+    if "inbody_logs" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("inbody_logs")}
+    with engine.connect() as conn:
+        if "ai_comment" not in cols:
+            conn.execute(text("ALTER TABLE inbody_logs ADD COLUMN ai_comment TEXT"))
+            print("✅ inbody_logs.ai_comment 컬럼 추가됨")
+        if "ai_generated_at" not in cols:
+            conn.execute(text("ALTER TABLE inbody_logs ADD COLUMN ai_generated_at DATETIME"))
+            print("✅ inbody_logs.ai_generated_at 컬럼 추가됨")
+        conn.commit()
+
+
 _ensure_users_age_column()
+_ensure_inbody_ai_columns()
 
 # 1. 현재 main.py 파일의 위치를 기준으로 경로 설정
 # main.py가 backend/app/main.py에 있다면:
@@ -107,6 +131,7 @@ app.include_router(routine.router, prefix="/api/v1/routine", tags=["routine"])
 app.include_router(journal.router, prefix="/api/v1/journal", tags=["journal"])
 app.include_router(user_endpoint.router, prefix="/api/v1/user", tags=["user"])
 app.include_router(body_endpoint.router, prefix="/api/v1/body", tags=["body"])
+app.include_router(community_endpoint.router, prefix="/api/v1/community", tags=["community"])
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

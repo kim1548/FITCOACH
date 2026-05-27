@@ -51,6 +51,13 @@ const JournalPage = ({ theme }) => {
       .catch(() => setNutrition(null));
   }, []);
 
+  // 진입 직후 오늘 날짜 모달을 한 번 펼친다 — 메인 페이지로서 즉시 오늘 상태를 보여주기 위함.
+  // 사용자가 닫으면 그대로 캘린더만 보이고, 페이지 다시 진입 시 또 펼침.
+  useEffect(() => {
+    setSelectedDate(toISO(today.getFullYear(), today.getMonth() + 1, today.getDate()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const goPrevMonth = () => {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
     else setMonth(m => m - 1);

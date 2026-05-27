@@ -7,7 +7,6 @@ import { useAuth } from "../context/AuthContext";
 const ROUTE_CONFIG = {
   // "exercise": { name: "운동 분석", link: "/Exercise" },
   // "diet": { name: "식단 기록", link: "/diet" },
-  // "Dashboard": { name: "대시보드", link: "/Dashboard" },
   // "journal": { name: "저널", link: "/journal" },
   
   // 운동 ID 매핑 (URL에 포함된 영문을 한글로 변환)
@@ -37,7 +36,7 @@ const TopNavbar = ({ s, onOpenSettings }) => {
       
       {/* 왼쪽: 탐색기형 경로 (Breadcrumb) */}
       <div className="flex items-center gap-2 text-sm font-bold tracking-tighter overflow-x-auto whitespace-nowrap scrollbar-hide max-w-[80%]">
-        <Link to="/Dashboard" className="hover:text-blue-500 transition-colors uppercase flex-shrink-0 text-blue-500">
+        <Link to="/journal" className="hover:text-blue-500 transition-colors uppercase flex-shrink-0 text-blue-500">
           FITCOACH
         </Link>
         

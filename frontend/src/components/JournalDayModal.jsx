@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import {
-  X, Activity, Utensils, Save, Pencil, Loader2,
+  X, Activity, Utensils, Save, Pencil, Loader2, TrendingUp, Sparkles,
 } from 'lucide-react';
 import NutritionProgressRow from './NutritionProgressRow';
 
@@ -210,6 +210,66 @@ const JournalDayModal = ({ date, theme, nutrition, onClose, onAfterChange }) => 
                   <p className={`text-sm ${subText}`}>이 날 식단 기록이 없어요.</p>
                 )}
               </section>
+
+              {/* 체성분 (InBody) — 그 날 측정이 있을 때만 */}
+              {data.body && (
+                <section>
+                  <div className="flex items-center gap-2 mb-3 text-blue-500">
+                    <TrendingUp size={16} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">체성분</span>
+                  </div>
+                  <div className={`p-4 rounded-2xl ${sectionBg} space-y-4`}>
+                    {/* 4 지표 + 직전 대비 델타 */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: '체중', key: 'weight', unit: 'kg', betterLower: false },
+                        { label: '골격근', key: 'skeletal_muscle', unit: 'kg', betterLower: false },
+                        { label: '체지방', key: 'body_fat_mass', unit: 'kg', betterLower: true },
+                        { label: '체지방률', key: 'body_fat_percent', unit: '%', betterLower: true },
+                      ].map(m => {
+                        const v = data.body.values?.[m.key];
+                        const d = data.body.deltas?.[m.key];
+                        const improving = d != null && d !== 0 && (m.betterLower ? d < 0 : d > 0);
+                        const declining = d != null && d !== 0 && (m.betterLower ? d > 0 : d < 0);
+                        const deltaCls = d == null || d === 0
+                          ? subText
+                          : improving ? 'text-green-500' : declining ? 'text-orange-500' : subText;
+                        return (
+                          <div key={m.key}>
+                            <p className={`text-[10px] font-black uppercase tracking-widest ${subText} mb-1`}>{m.label}</p>
+                            <p className="text-lg font-black tabular-nums">
+                              {v != null ? v : <span className={subText}>—</span>}
+                              {v != null && <span className={`text-[10px] font-normal ${subText} ml-1`}>{m.unit}</span>}
+                            </p>
+                            {d != null && (
+                              <p className={`text-[10px] font-black mt-0.5 ${deltaCls}`}>
+                                {d > 0 ? '+' : ''}{d}{m.unit}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* AI 코멘트 */}
+                    <div className="pt-3 border-t border-white/5">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Sparkles size={12} className="text-blue-400" />
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${subText}`}>
+                          {data.body.deltas ? '직전 대비 분석' : '첫 측정 평가'}
+                        </span>
+                      </div>
+                      {data.body.ai_comment ? (
+                        <p className="text-sm leading-relaxed">{data.body.ai_comment}</p>
+                      ) : (
+                        <p className={`text-xs ${subText} italic`}>
+                          AI 코멘트 생성 중이거나 아직 받아오지 못했어요. 잠시 후 다시 열어보세요.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
 
               {/* 한 줄 평 */}
               <section>

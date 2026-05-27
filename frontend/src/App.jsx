@@ -7,9 +7,9 @@ import SettingsDrawer from "./components/SettingsDrawer";
 import DietPage from "./pages/DietPage";
 import JournalPage from "./pages/JournalPage";
 import BodyPage from "./pages/BodyPage";
+import CommunityPage from "./pages/CommunityPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
 import { AuthProvider } from "./context/AuthContext";
 import DesignMain from "./pages/designa/DesignMain";
 import DietAddPage from './pages/DietAddPage';
@@ -56,7 +56,7 @@ const AppContent = () => {
             <TopNavbar s={s} onOpenSettings={() => setSettingsOpen(true)} />
             <main className="flex-1 relative overflow-hidden flex justify-center">
               <Routes>
-                <Route path="/" element={<Navigate to="/Dashboard" replace />} />
+                <Route path="/" element={<Navigate to="/journal" replace />} />
 
                 {/* 1. 루틴 계획 (새로운 중량 트래커) */}
                 <Route path="/program" element={<RoutinePlanPage theme={theme} />} />
@@ -71,7 +71,7 @@ const AppContent = () => {
                 <Route path="/meals/add" element={<DietAddPage />} />
                 <Route path="/journal" element={<JournalPage theme={theme} />} />
                 <Route path="/body" element={<BodyPage theme={theme} />} />
-                <Route path="/Dashboard" element={<Dashboard theme={theme} />} />
+                <Route path="/community" element={<CommunityPage theme={theme} />} />
               </Routes>
             </main>
             {/* 하단 네비바 고정 */}

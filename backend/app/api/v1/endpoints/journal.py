@@ -21,6 +21,7 @@ from app.models.user import User
 from app.models.routine_log import RoutineLog
 from app.models.diet_log import DietLog
 from app.models.journal_entry import JournalEntry
+from app.models.inbody_log import InBodyLog
 from app.api.v1.endpoints.auth import get_current_user
 from app.services.journal_ai import generate_and_save_ai_comment
 
@@ -130,6 +131,16 @@ def get_journal_day(
         )
         .first()
     )
+    # 같은 날 측정이 여러 번 있어도 가장 최근(같은 날짜면 created_at desc) 1개만 노출.
+    body_log = (
+        db.query(InBodyLog)
+        .filter(
+            InBodyLog.user_id == current_user.id,
+            InBodyLog.measured_at == target_date,
+        )
+        .order_by(InBodyLog.created_at.desc())
+        .first()
+    )
 
     # 운동 응답 정리
     workout_payload = None
@@ -177,10 +188,60 @@ def get_journal_day(
             "by_meal": by_meal,
         }
 
+    # 체성분 응답 — 그 날 측정이 있을 때만, 직전 측정 대비 델타까지 같이 계산해 둔다.
+    body_payload = None
+    if body_log is not None:
+        prev_log = (
+            db.query(InBodyLog)
+            .filter(InBodyLog.user_id == current_user.id, InBodyLog.id != body_log.id)
+            .filter(
+                (InBodyLog.measured_at < body_log.measured_at)
+                | (
+                    (InBodyLog.measured_at == body_log.measured_at)
+                    & (InBodyLog.created_at < body_log.created_at)
+                )
+            )
+            .order_by(InBodyLog.measured_at.desc(), InBodyLog.created_at.desc())
+            .first()
+        )
+
+        def _delta(curr_v, prev_v):
+            if curr_v is None or prev_v is None:
+                return None
+            return round(curr_v - prev_v, 1)
+
+        body_payload = {
+            "id": body_log.id,
+            "measured_at": body_log.measured_at.isoformat() if body_log.measured_at else None,
+            "values": {
+                "weight": body_log.weight,
+                "skeletal_muscle": body_log.skeletal_muscle,
+                "body_fat_mass": body_log.body_fat_mass,
+                "body_fat_percent": body_log.body_fat_percent,
+                "bmr": body_log.bmr,
+            },
+            "prev_measured_at": (
+                prev_log.measured_at.isoformat() if prev_log and prev_log.measured_at else None
+            ),
+            "deltas": (
+                {
+                    "weight": _delta(body_log.weight, prev_log.weight),
+                    "skeletal_muscle": _delta(body_log.skeletal_muscle, prev_log.skeletal_muscle),
+                    "body_fat_mass": _delta(body_log.body_fat_mass, prev_log.body_fat_mass),
+                    "body_fat_percent": _delta(body_log.body_fat_percent, prev_log.body_fat_percent),
+                }
+                if prev_log
+                else None
+            ),
+            "ai_comment": body_log.ai_comment,
+            "ai_generated_at": body_log.ai_generated_at.isoformat() if body_log.ai_generated_at else None,
+        }
+
     return {
         "date": target_date.isoformat(),
         "workout": workout_payload,
         "diet": diet_payload,
+        "body": body_payload,
         "ai_comment": entry.ai_comment if entry else None,
         "ai_generated_at": entry.ai_generated_at.isoformat() if entry and entry.ai_generated_at else None,
         "user_note": entry.user_note if entry else None,

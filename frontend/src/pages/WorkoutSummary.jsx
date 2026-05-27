@@ -382,7 +382,7 @@ const WorkoutSummary = ({ theme }) => {
 
         <div className="mt-10 flex gap-3">
           <button
-            onClick={() => navigate('/Dashboard')}
+            onClick={() => navigate('/journal')}
             className={`flex-1 py-4 rounded-2xl font-black text-sm tracking-wide active:scale-95 transition-all ${
               isDark ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
             }`}

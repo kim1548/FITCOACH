@@ -5,7 +5,7 @@ from jose import jwt
 
 SECRET_KEY = "your-super-secret-key"  # 나중에 복잡하게 바꿔야 합니다!
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 1주일
 
 
 def create_access_token(data: dict):

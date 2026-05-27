@@ -1,7 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from typing import List, Dict
 import math
 
@@ -149,47 +148,6 @@ def finish_workout(data: WorkoutResultRequest, db: Session = Depends(get_db)):
     db.add(new_log)
     db.commit()
     return {"status": "success"}
-
-@router.get("/dashboard-stats")
-def get_dashboard_stats(db: Session = Depends(get_db)):
-    try:
-        today = datetime.now().date()
-        
-        # ❌ 에러 난 부분: db.func.date(...)
-        # ✅ 수정 후: func.date(...) 직접 사용
-        today_logs = db.query(RoutineLog).filter(
-            func.date(RoutineLog.workout_date) == today
-        ).all()
-
-        # 디버깅용: 로그가 몇 개나 잡히는지 서버 터미널에 찍어보세요
-        print(f"오늘의 로그 개수: {len(today_logs)}")
-
-        # 데이터가 없을 경우를 위한 방어 코드
-        total_volume = sum(log.total_volume for log in today_logs) if today_logs else 0
-        burned_kcal = int(total_volume * 0.05)
-        total_minutes = len(today_logs) * 45 
-
-        return {
-        "workout_time": 45,
-        "total_volume": 3200,
-        "burned_calories": 250,
-        "history": [  # 👈 이 'history'가 리스트여야 그래프가 그려집니다!
-            {"date": "05-01", "total_volume": 2800},
-            {"date": "05-03", "total_volume": 3000},
-            {"date": "05-05", "total_volume": 3200},
-        ],
-        "muscle_group_data": [
-            {"group": "Chest", "volume": 4500},
-            {"group": "Back", "volume": 3800},
-            {"group": "Legs", "volume": 1500},  # 👈 볼륨이 낮으면 프론트에서 강조!
-            {"group": "Shoulders", "volume": 2200},
-            {"group": "Arms", "volume": 1200}
-        ]
-    }
-    except Exception as e:
-        # 서버 에러 시 500을 내뱉는 대신 에러 메시지 확인
-        print(f"대시보드 에러 발생: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 # --- 프로그램 페이지(/program)에서 완료한 운동 세션을 DB에 저장 ---

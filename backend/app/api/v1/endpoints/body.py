@@ -8,7 +8,7 @@ InBody(체성분) 측정 기록 CRUD 엔드포인트.
 from datetime import date as date_t
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.inbody_log import InBodyLog
 from app.api.v1.endpoints.auth import get_current_user
+from app.services.inbody_ai import generate_and_save_body_comment
 
 router = APIRouter()
 
@@ -38,6 +39,8 @@ def _serialize(log: InBodyLog) -> dict:
         "body_fat_mass": log.body_fat_mass,
         "body_fat_percent": log.body_fat_percent,
         "bmr": log.bmr,
+        "ai_comment": log.ai_comment,
+        "ai_generated_at": log.ai_generated_at.isoformat() if log.ai_generated_at else None,
     }
 
 
@@ -66,6 +69,7 @@ def list_inbody(
 @router.post("")
 def create_inbody(
     data: InBodyCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -82,7 +86,33 @@ def create_inbody(
     db.add(new_log)
     db.commit()
     db.refresh(new_log)
+    # 직전 측정 대비 변화(또는 첫 측정 베이스라인) 코멘트를 Gemma 에 비동기로 요청.
+    # Ollama 미설치/장애여도 본 응답은 정상 반환된다.
+    background_tasks.add_task(generate_and_save_body_comment, new_log.id)
     return _serialize(new_log)
+
+
+@router.post("/{log_id}/regenerate")
+def regenerate_body_comment(
+    log_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """백그라운드 생성이 실패했을 때 사용자가 직접 누르는 폴백 — 동기 호출."""
+    log = db.query(InBodyLog).filter(
+        InBodyLog.id == log_id,
+        InBodyLog.user_id == current_user.id,
+    ).first()
+    if log is None:
+        raise HTTPException(status_code=404, detail="해당 측정 기록을 찾을 수 없습니다.")
+    comment = generate_and_save_body_comment(log.id)
+    if comment is None:
+        raise HTTPException(
+            status_code=503,
+            detail="AI 코멘트 생성에 실패했습니다. (Ollama 서버가 응답하지 않습니다.)",
+        )
+    db.refresh(log)
+    return _serialize(log)
 
 
 @router.delete("/{log_id}")
