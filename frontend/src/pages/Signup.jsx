@@ -22,6 +22,7 @@ const Signup = () => {
     username: "",
     password: "",
     gender: GENDER_OPTIONS[0],
+    age: 25,
     height: 170,
     weight: 70,
     lifestyle: LIFESTYLE_OPTIONS[0],
@@ -43,6 +44,7 @@ const Signup = () => {
     try {
       await axios.post(`${API_BASE_URL}/auth/signup`, {
         ...form,
+        age: Number(form.age),
         height: Number(form.height),
         weight: Number(form.weight),
       });
@@ -86,16 +88,25 @@ const Signup = () => {
         {/* 2) 신체 정보 */}
         <div>
           <span className={labelCls}>신체 정보</span>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-2">
             <select className={selectCls} value={form.gender} onChange={set("gender")}>
               {GENDER_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
             </select>
             <input
               className={inputCls}
               type="number"
+              min="10"
+              max="100"
+              placeholder="나이"
+              value={form.age}
+              onChange={set("age")}
+            />
+            <input
+              className={inputCls}
+              type="number"
               min="100"
               max="250"
-              placeholder="키(cm)"
+              placeholder="키"
               value={form.height}
               onChange={set("height")}
             />

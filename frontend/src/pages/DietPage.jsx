@@ -4,10 +4,40 @@ import { API_BASE_URL } from '../api/config';
 import { useNavigate } from 'react-router-dom';
 import { Plus, RotateCcw, Edit3, X } from 'lucide-react';
 
+// 진행률(%) 에 따라 막대 색을 결정. 80% 미만은 부족, 80~110은 적정, 그 이상은 과잉.
+const barColor = (pct) => {
+  if (pct < 80) return 'bg-blue-500';
+  if (pct <= 110) return 'bg-green-500';
+  return 'bg-orange-500';
+};
+
+const ProgressRow = ({ label, consumed, target, unit, accent }) => {
+  const safeTarget = target || 1;
+  const pct = Math.round((consumed / safeTarget) * 100);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between">
+        <span className={`text-[10px] font-black uppercase tracking-widest ${accent || 'text-slate-500'}`}>{label}</span>
+        <span className="text-xs font-black tabular-nums">
+          {Math.round(consumed)}<span className="text-slate-500"> / {target}{unit}</span>
+          <span className="ml-2 text-slate-600">{pct}%</span>
+        </span>
+      </div>
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className={`h-full transition-all ${barColor(pct)}`}
+          style={{ width: `${Math.min(100, pct)}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
 const DietPage = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const [summary, setSummary] = useState({ total: { kcal: 0, carbs: 0, protein: 0, fat: 0 }, logs: [] });
+  const [me, setMe] = useState(null);
 
   const [aiFeedback, setAiFeedback] = useState(""); // AI 답변 저장
   const [isLoading, setIsLoading] = useState(false); // 로딩 상태
@@ -53,6 +83,15 @@ const DietPage = () => {
   };
 
   useEffect(() => { fetchSummary(); }, []);
+
+  // 영양 목표 정보 한 번 받아두기 (로그인 상태일 때만)
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get(`${API_BASE_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setMe(res.data))
+      .catch(() => setMe(null));
+  }, [token]);
 
   const handleReset = async (mealType) => {
     if (!window.confirm(`${mealType} 기록을 초기화할까요?`)) return;
@@ -104,7 +143,63 @@ const DietPage = () => {
 
         {/* 메인 컨텐츠 */}
         <main className="flex-1 p-6 lg:p-10 space-y-10">
-          
+
+          {/* --- [오늘의 영양 목표] --- */}
+          <section className="bg-[#16161a] rounded-[2.5rem] p-8 border border-white/5">
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">오늘의 영양 목표</p>
+              {me?.goal && (
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  {me.goal}
+                </span>
+              )}
+            </div>
+            {me?.nutrition ? (
+              <div className="space-y-5">
+                <ProgressRow
+                  label="칼로리"
+                  consumed={summary?.total?.kcal || 0}
+                  target={me.nutrition.target_kcal}
+                  unit=" kcal"
+                  accent="text-white"
+                />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-white/5">
+                  <ProgressRow
+                    label="탄수"
+                    consumed={summary?.total?.carbs || 0}
+                    target={me.nutrition.target_carbs}
+                    unit="g"
+                    accent="text-blue-400"
+                  />
+                  <ProgressRow
+                    label="단백"
+                    consumed={summary?.total?.protein || 0}
+                    target={me.nutrition.target_protein}
+                    unit="g"
+                    accent="text-orange-400"
+                  />
+                  <ProgressRow
+                    label="지방"
+                    consumed={summary?.total?.fat || 0}
+                    target={me.nutrition.target_fat}
+                    unit="g"
+                    accent="text-yellow-400"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-600 tracking-wider pt-2">
+                  BMR {me.nutrition.bmr} · TDEE {me.nutrition.tdee} kcal 기준
+                </p>
+              </div>
+            ) : me ? (
+              <p className="text-sm text-slate-400 leading-relaxed">
+                프로필에 <span className="text-orange-400 font-bold">나이</span>가 비어있어 목표 계산이 안 돼요.
+                새 계정으로 회원가입할 때 나이를 입력하면 자동 계산됩니다.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500">로그인 후 영양 목표가 표시됩니다.</p>
+            )}
+          </section>
+
           {/* --- [대시보드: 전체 에너지 요약] --- */}
           <section className="bg-[#16161a] rounded-[3rem] p-10 border border-white/5 shadow-2xl relative overflow-hidden">
             {/* 배경 데코레이션 */}
