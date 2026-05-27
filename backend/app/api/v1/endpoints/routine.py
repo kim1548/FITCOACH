@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict
@@ -10,6 +10,7 @@ from app.models.routine_log import UserRoutineStats, RoutineLog
 from app.models.user import User
 from app.schemas.routine import DailyPlanResponse, RoutineStatUpdate, RoutineStatResponse
 from app.services.routine_calculator import RoutineCalculator
+from app.services.journal_ai import generate_and_save_ai_comment
 from app.api.v1.endpoints.auth import get_current_user
 from pydantic import BaseModel
 
@@ -210,6 +211,7 @@ class RoutineLogCreate(BaseModel):
 @router.post("/log")
 def create_routine_log(
     data: RoutineLogCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -233,4 +235,8 @@ def create_routine_log(
     db.add(new_log)
     db.commit()
     db.refresh(new_log)
+
+    # 응답은 즉시 돌려보내고, 그날의 Journal AI 코멘트는 백그라운드에서 생성
+    background_tasks.add_task(generate_and_save_ai_comment, current_user.id, dt.date())
+
     return {"status": "success", "log_id": new_log.id}

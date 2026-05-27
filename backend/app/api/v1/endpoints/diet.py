@@ -7,14 +7,15 @@ import pandas as pd
 import io
 import os
 import uuid  
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from datetime import date, datetime
 from sqlalchemy import func
-from app.database import get_db 
+from app.database import get_db
 from app.api.v1.endpoints.auth import get_current_user
 from app.models.user import User
 from app.models.diet_log import DietLog
+from app.services.journal_ai import generate_and_save_ai_comment
 
 router = APIRouter()
 
@@ -222,25 +223,26 @@ async def analyze_food(file: UploadFile = File(...)):
 
 @router.post("/record-many")
 def record_many_diet(
-    data: dict, 
-    db: Session = Depends(get_db), 
+    data: dict,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     items = data.get("items", [])
     meal_type = data.get("meal_type")
-    group_id = data.get("group_id") 
-    image_url = data.get("image_url")  
-    save_as_fav = data.get("save_as_favorite", False) 
+    group_id = data.get("group_id")
+    image_url = data.get("image_url")
+    save_as_fav = data.get("save_as_favorite", False)
     today = date.today()
 
     try:
         if meal_type in ['아침', '점심', '저녁']:
             db.query(DietLog).filter(
-                DietLog.user_id == current_user.id, 
-                DietLog.date == today, 
+                DietLog.user_id == current_user.id,
+                DietLog.date == today,
                 DietLog.meal_type == meal_type
             ).delete()
-        else: 
+        else:
             if group_id:
                 db.query(DietLog).filter(
                     DietLog.user_id == current_user.id,
@@ -257,13 +259,17 @@ def record_many_diet(
                 fat=item.get("fat", 0),
                 weight=item.get("weight", 100),
                 meal_type=meal_type,
-                entry_group_id=group_id, 
-                image_url=image_url,     
+                entry_group_id=group_id,
+                image_url=image_url,
                 date=today,
-                is_favorite=1 if save_as_fav else 0 
+                is_favorite=1 if save_as_fav else 0
             )
             db.add(new_log)
         db.commit()
+
+        # 응답은 즉시 돌려보내고, 그날의 Journal AI 코멘트는 백그라운드에서 생성
+        background_tasks.add_task(generate_and_save_ai_comment, current_user.id, today)
+
         return {"status": "success", "message": "식단이 성공적으로 저장되었습니다."}
     except Exception as e:
         db.rollback()
