@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import { Calendar, Activity, Utensils, MessageSquare, ChevronRight } from 'lucide-react';
 
-const BlogPage = ({ theme }) => {
+const JournalPage = ({ theme }) => {
   const [history, setHistory] = useState([]); // 일기 리스트 데이터
   const [isLoading, setIsLoading] = useState(true);
 
@@ -128,4 +128,4 @@ const BlogPage = ({ theme }) => {
   );
 };
 
-export default BlogPage;
+export default JournalPage;

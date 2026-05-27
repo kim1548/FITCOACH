@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import ExercisePage from "./pages/ExercisePage";
 import DietPage from "./pages/DietPage";
-import BlogPage from "./pages/BlogPage";
+import JournalPage from "./pages/JournalPage";
 import Settings from "./pages/Settings";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -44,7 +44,7 @@ const App = () => {
                   <Route path="/" element={<Navigate to="/exercise" replace />} />
                   <Route path="/exercise" element={<ExercisePage themeStyles={s} theme={theme} />} />
                   <Route path="/diet" element={<DietPage theme={theme} />} />
-                  <Route path="/blog" element={<BlogPage theme={theme} />} />
+                  <Route path="/journal" element={<JournalPage theme={theme} />} />
                   <Route path="/settings" element={<Settings theme={theme} setTheme={setTheme} />} />
                 </Routes>
               </main>

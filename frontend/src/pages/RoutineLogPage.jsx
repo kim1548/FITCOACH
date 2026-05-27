@@ -2,7 +2,7 @@ import React from 'react';
 import { ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { Save, RotateCcw, Award, CheckCircle2, AlertCircle, Activity, Target, ShieldCheck } from 'lucide-react';
 
-const FeedbackDetail = ({ result, exerciseName, theme, onReset, onSaveToBlog }) => {
+const FeedbackDetail = ({ result, exerciseName, theme, onReset, onSaveToJournal }) => {
   const isDark = theme === 'dark';
   // 🟢 데이터가 아직 안 넘어왔을 때 보여줄 안전장치 (무한 로딩 방지)
   if (!result) {
@@ -115,9 +115,9 @@ const FeedbackDetail = ({ result, exerciseName, theme, onReset, onSaveToBlog }) 
           <RotateCcw size={20} />
           다시 시작하기
         </button>
-        <button onClick={onSaveToBlog} className="flex-[1.5] flex items-center justify-center gap-2 py-5 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+        <button onClick={onSaveToJournal} className="flex-[1.5] flex items-center justify-center gap-2 py-5 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all active:scale-95 shadow-lg shadow-blue-900/20">
           <Save size={20} />
-          AI 리포트 블로그에 저장
+          AI 리포트 저널에 저장
         </button>
       </div>
     </div>

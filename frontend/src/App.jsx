@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import TopNavbar from "./components/TopNavbar";
 import Navbar from "./components/Navbar";
 import DietPage from "./pages/DietPage";
-import BlogPage from "./pages/BlogPage";
+import JournalPage from "./pages/JournalPage";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -67,7 +67,7 @@ const AppContent = () => {
 
                 <Route path="/meals" element={<DietPage theme={theme} />} />
                 <Route path="/meals/add" element={<DietAddPage />} />
-                <Route path="/blog" element={<BlogPage theme={theme} />} />
+                <Route path="/journal" element={<JournalPage theme={theme} />} />
                 <Route path="/Dashboard" element={<Dashboard theme={theme} />} />
                 <Route path="/settings" element={<Settings theme={theme} setTheme={setTheme} />} />
               </Routes>

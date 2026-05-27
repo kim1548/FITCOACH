@@ -20,7 +20,7 @@ const Navbar = ({ s }) => {
 
   return (
     <nav className={`h-20 ${s.nav} border-t ${s.border} flex items-center justify-around px-4 z-[100] shadow-lg`}>
-      <NavButton to="/blog" icon={<BookText size={22} />} label="Blog" />
+      <NavButton to="/journal" icon={<BookText size={22} />} label="Journal" />
       
       {/* 1. 루틴 계획 (새로 추가될 중량/세트 관리 페이지) */}
       <NavButton to="/program" icon={<ClipboardList size={22} />} label="PROGRAM" />

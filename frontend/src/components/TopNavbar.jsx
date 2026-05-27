@@ -7,7 +7,7 @@ const ROUTE_CONFIG = {
   // "exercise": { name: "운동 분석", link: "/Exercise" },
   // "diet": { name: "식단 기록", link: "/diet" },
   // "Dashboard": { name: "대시보드", link: "/Dashboard" },
-  // "blog": { name: "히스토리", link: "/blog" },
+  // "journal": { name: "저널", link: "/journal" },
   
   // 운동 ID 매핑 (URL에 포함된 영문을 한글로 변환)
   // "SQUAT": { name: "스쿼트", link: null },
