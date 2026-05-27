@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Camera, Trash2, Loader2, Star, Heart, X } from "lucide-react";
+import { Camera, Trash2, Loader2, Star, Heart, X, Search } from "lucide-react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from "axios";
 import { API_BASE_URL } from "../api/config";
@@ -17,6 +17,8 @@ const DietAddPage = () => {
   const [favorites, setFavorites] = useState({ meal: [], snack: [] });
   const [activeTab, setActiveTab] = useState(mealType === "간식" ? "snack" : "meal");
   const [dropdownList, setDropdownList] = useState({ index: null, results: [] });
+  const [topQuery, setTopQuery] = useState("");
+  const [topResults, setTopResults] = useState([]);
 
   const generateId = () => `row-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -104,11 +106,47 @@ const DietAddPage = () => {
   const fetchNutrition = async (index, name) => {
     if (!name.trim()) { setDropdownList({ index: null, results: [] }); return; }
     try {
-      const res = await axios.get(`${API_BASE_URL}/diet/search-nutrition`, { 
-        params: { name }, headers: { Authorization: `Bearer ${token}` } 
+      const res = await axios.get(`${API_BASE_URL}/diet/search-nutrition`, {
+        params: { name }, headers: { Authorization: `Bearer ${token}` }
       });
       setDropdownList({ index, results: res.data || [] });
     } catch (err) { console.error(err); }
+  };
+
+  // 상단 검색바: 250ms 디바운스로 /diet/search-nutrition 조회.
+  useEffect(() => {
+    const q = topQuery.trim();
+    if (!q) { setTopResults([]); return; }
+    const timer = setTimeout(() => {
+      axios.get(`${API_BASE_URL}/diet/search-nutrition`, {
+        params: { name: q },
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(res => setTopResults(res.data || []))
+        .catch(() => setTopResults([]));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [topQuery, token]);
+
+  // 검색 결과 선택 시 음식 리스트에 새 행으로 추가 (빈 행은 정리).
+  const addFoodFromSearch = (item) => {
+    setFoods(prev => {
+      const filled = prev.filter(f => f.food_name?.trim());
+      return [
+        ...filled,
+        {
+          id: generateId(),
+          food_name: item.food_name,
+          calories: item.kcal,
+          carbs: item.carbs,
+          protein: item.protein,
+          fat: item.fat,
+          weight: 100,
+        },
+      ];
+    });
+    setTopQuery("");
+    setTopResults([]);
   };
 
   const selectFood = (index, foodData) => {
@@ -164,6 +202,44 @@ const DietAddPage = () => {
 
         {/* 메인 컨텐츠 영역 */}
         <main className="flex-1 p-6 lg:p-10">
+
+          {/* 상단 검색 바 — 사진 없이도 음식 추가 가능 */}
+          <div className="relative mb-8">
+            <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              value={topQuery}
+              onChange={(e) => setTopQuery(e.target.value)}
+              placeholder="음식 이름을 검색해서 추가 (예: 닭가슴살)"
+              className="w-full pl-14 pr-12 py-5 bg-[#16161a] border border-white/5 rounded-2xl text-base font-bold text-white placeholder:text-slate-600 outline-none focus:border-blue-500/40 transition-colors"
+            />
+            {topQuery && (
+              <button
+                onClick={() => { setTopQuery(""); setTopResults([]); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-white"
+                aria-label="검색어 지우기"
+              >
+                <X size={16} />
+              </button>
+            )}
+            {topResults.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-[120] bg-[#1c1c22] border border-blue-500/30 rounded-2xl mt-2 shadow-2xl overflow-hidden max-h-80 overflow-y-auto">
+                {topResults.map((item, idx) => (
+                  <button
+                    key={`top-${idx}`}
+                    onClick={() => addFoodFromSearch(item)}
+                    className="w-full text-left px-5 py-4 hover:bg-blue-600 border-b border-white/5 last:border-0 transition-colors"
+                  >
+                    <div className="text-sm font-bold text-white">{item.food_name}</div>
+                    <div className="text-[11px] text-slate-500 mt-1 tabular-nums">
+                      {Math.round(item.kcal)} kcal / 100g · 탄 {Math.round(item.carbs)}g · 단 {Math.round(item.protein)}g · 지 {Math.round(item.fat)}g
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             
             {/* 좌측 섹션 (사진/에너지) - 고정 폭 유지 및 반응형 대응 */}
