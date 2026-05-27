@@ -9,13 +9,14 @@ from app.models.user import User
 from app.models.diet_log import DietLog
 from app.models.exercise_log import WorkoutLog
 from app.models.journal_entry import JournalEntry  # noqa: F401  (테이블 자동 생성용)
+from app.models.inbody_log import InBodyLog  # noqa: F401  (테이블 자동 생성용)
 # 기존 라우터들
 from app.api.v1.endpoints import exercise, diet, auth
 
 from pydantic import BaseModel  # 추가
 import httpx
 from fastapi.staticfiles import StaticFiles
-from app.api.v1.endpoints import routine, journal, user as user_endpoint
+from app.api.v1.endpoints import routine, journal, user as user_endpoint, body as body_endpoint
 from sqlalchemy import inspect, text
 
 app = FastAPI()
@@ -105,6 +106,7 @@ app.include_router(diet.router, prefix="/api/v1/diet", tags=["diet"])
 app.include_router(routine.router, prefix="/api/v1/routine", tags=["routine"])
 app.include_router(journal.router, prefix="/api/v1/journal", tags=["journal"])
 app.include_router(user_endpoint.router, prefix="/api/v1/user", tags=["user"])
+app.include_router(body_endpoint.router, prefix="/api/v1/body", tags=["body"])
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
