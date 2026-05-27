@@ -138,7 +138,7 @@ const MADCOW = {
   sessions: [
     {
       id: 'mon',
-      label: '월요일 · 볼륨',
+      label: '볼륨',
       exercises: [
         { liftId: 'squat', sets: ramp([0.5, 0.625, 0.75, 0.875, 1.0], 5), prog: 'none' },
         { liftId: 'bench', sets: ramp([0.5, 0.625, 0.75, 0.875, 1.0], 5), prog: 'none' },
@@ -147,7 +147,7 @@ const MADCOW = {
     },
     {
       id: 'wed',
-      label: '수요일 · 회복',
+      label: '회복',
       exercises: [
         { liftId: 'squat', sets: ramp([0.5, 0.6, 0.7, 0.75], 5), prog: 'none' },
         { liftId: 'ohp', sets: ramp([0.5, 0.625, 0.75, 0.875, 1.0], 5), prog: 'standard' },
@@ -156,7 +156,7 @@ const MADCOW = {
     },
     {
       id: 'fri',
-      label: '금요일 · 강도',
+      label: '강도',
       exercises: [
         {
           liftId: 'squat',
@@ -412,7 +412,7 @@ const TEXAS = {
   sessions: [
     {
       id: 'mon',
-      label: '월요일 · 볼륨',
+      label: '볼륨',
       exercises: [
         { liftId: 'squat', sets: flat(5, 0.9, 5), prog: 'none' },
         { liftId: 'bench', sets: flat(5, 0.9, 5), prog: 'none' },
@@ -421,7 +421,7 @@ const TEXAS = {
     },
     {
       id: 'wed',
-      label: '수요일 · 회복',
+      label: '회복',
       exercises: [
         { liftId: 'squat', sets: flat(2, 0.8, 5), prog: 'none' },
         { liftId: 'ohp', sets: flat(3, 1.0, 5), prog: 'standard' },
@@ -430,7 +430,7 @@ const TEXAS = {
     },
     {
       id: 'fri',
-      label: '금요일 · 강도',
+      label: '강도',
       exercises: [
         { liftId: 'squat', sets: [set(1.0, 5, 'top')], prog: 'standard' },
         { liftId: 'bench', sets: [set(1.0, 5, 'top')], prog: 'standard' },
