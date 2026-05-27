@@ -130,11 +130,27 @@ const JournalDayModal = ({ date, theme, onClose, onAfterChange }) => {
                         <ul className="space-y-1 text-xs">
                           {s.lifts.map((lift, i) => {
                             const inc = lift.weight > lift.prev_weight;
+                            const sets = Array.isArray(lift.sets) ? lift.sets : [];
+                            const reps = sets.map(x => x.reps);
+                            const allCompleted = sets.length > 0 && sets.every(x => x.completed);
+                            const allSame = sets.length > 0 && reps.every(r => r === reps[0]);
+                            let repsLabel = null;
+                            if (sets.length > 0) {
+                              repsLabel = (allSame && allCompleted)
+                                ? `${sets.length}×${reps[0]}`
+                                : reps.join(',');
+                            }
                             return (
-                              <li key={i} className="flex items-center gap-2">
+                              <li key={i} className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold">{lift.lift_id}</span>
                                 <span className={subText}>·</span>
                                 <span>{lift.weight}kg</span>
+                                {repsLabel && (
+                                  <>
+                                    <span className={subText}>·</span>
+                                    <span className="tabular-nums">{repsLabel}</span>
+                                  </>
+                                )}
                                 {inc && <span className="text-blue-500 text-[10px]">↑ {lift.prev_weight}→{lift.weight}</span>}
                                 {lift.outcome === 'success' && <span className="text-green-500 text-[10px]">성공</span>}
                                 {lift.outcome === 'fail' && <span className="text-red-500 text-[10px]">실패</span>}

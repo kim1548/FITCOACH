@@ -41,12 +41,13 @@ def _format_workout_block(workout_logs: list[RoutineLog]) -> str:
     for log in workout_logs:
         lines.append(f"프로그램: {log.routine_name}")
         for lift in (log.session_data or []):
-            # session_data 항목은 ProgramPlayPage가 보내는 LiftEntry 스키마와 동일:
-            # {lift_id, anchor_key, weight, prev_weight, outcome}
+            # session_data 항목은 ProgramPlayPage 의 LiftEntry 스키마.
+            # 신규: sets = [{reps, completed}, ...] 가 포함될 수 있음 (구 로그엔 없음).
             name = lift.get("lift_id", "unknown")
             w = lift.get("weight", 0)
             prev = lift.get("prev_weight", 0)
             outcome = lift.get("outcome", "")
+            sets = lift.get("sets") or []
 
             outcome_mark = (
                 "✅ 성공" if outcome == "success"
@@ -56,7 +57,20 @@ def _format_workout_block(workout_logs: list[RoutineLog]) -> str:
             increase_note = ""
             if w and prev and w > prev:
                 increase_note = f" (이전 {prev}kg 에서 증량)"
-            lines.append(f"- {name}: {w}kg × 5세트 {outcome_mark}{increase_note}")
+
+            # 세트 정보 포맷팅 — 균일하면 NxR, 아니면 콤마 나열, 없으면 추정.
+            if sets:
+                reps_vals = [s.get("reps", 0) for s in sets]
+                all_completed = all(s.get("completed", False) for s in sets)
+                all_same = all(r == reps_vals[0] for r in reps_vals) if reps_vals else False
+                if all_same and all_completed:
+                    set_label = f"{len(sets)}×{reps_vals[0]}"
+                else:
+                    set_label = f"세트 {','.join(str(r) for r in reps_vals)}"
+            else:
+                set_label = "5세트"
+
+            lines.append(f"- {name}: {w}kg · {set_label} {outcome_mark}{increase_note}")
     return "\n".join(lines)
 
 

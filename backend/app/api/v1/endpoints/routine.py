@@ -194,12 +194,18 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
 
 # --- 프로그램 페이지(/program)에서 완료한 운동 세션을 DB에 저장 ---
 
+class SetEntry(BaseModel):
+    reps: int
+    completed: bool = True
+
+
 class LiftEntry(BaseModel):
     lift_id: str
     anchor_key: str
     weight: float
     prev_weight: float
     outcome: str = ""
+    sets: List[SetEntry] = []
 
 class RoutineLogCreate(BaseModel):
     date: str

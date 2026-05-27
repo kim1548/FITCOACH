@@ -241,6 +241,7 @@ const ProgramPlayPage = ({ theme }) => {
         prevWeight: anchor,
         nextWeight: nextAnchor,
         outcome,
+        sets: setStates,
       });
     });
 
@@ -261,6 +262,7 @@ const ProgramPlayPage = ({ theme }) => {
         weight: r.nextWeight,
         prevWeight: r.prevWeight,
         outcome: r.outcome,
+        sets: r.sets,
       })),
     };
 
@@ -286,6 +288,7 @@ const ProgramPlayPage = ({ theme }) => {
             weight: l.weight,
             prev_weight: l.prevWeight,
             outcome: l.outcome,
+            sets: l.sets || [],
           })),
         },
         { headers: { Authorization: `Bearer ${token}` } },
