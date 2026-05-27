@@ -6,6 +6,7 @@ import Navbar from "./components/Navbar";
 import SettingsDrawer from "./components/SettingsDrawer";
 import DietPage from "./pages/DietPage";
 import JournalPage from "./pages/JournalPage";
+import BodyPage from "./pages/BodyPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -69,6 +70,7 @@ const AppContent = () => {
                 <Route path="/meals" element={<DietPage theme={theme} />} />
                 <Route path="/meals/add" element={<DietAddPage />} />
                 <Route path="/journal" element={<JournalPage theme={theme} />} />
+                <Route path="/body" element={<BodyPage theme={theme} />} />
                 <Route path="/Dashboard" element={<Dashboard theme={theme} />} />
               </Routes>
             </main>
