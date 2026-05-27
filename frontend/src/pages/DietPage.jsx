@@ -3,35 +3,7 @@ import axios from 'axios'; // axios가 설치되어 있어야 합니다 (npm ins
 import { API_BASE_URL } from '../api/config';
 import { useNavigate } from 'react-router-dom';
 import { Plus, RotateCcw, Edit3, X } from 'lucide-react';
-
-// 진행률(%) 에 따라 막대 색을 결정. 80% 미만은 부족, 80~110은 적정, 그 이상은 과잉.
-const barColor = (pct) => {
-  if (pct < 80) return 'bg-blue-500';
-  if (pct <= 110) return 'bg-green-500';
-  return 'bg-orange-500';
-};
-
-const ProgressRow = ({ label, consumed, target, unit, accent }) => {
-  const safeTarget = target || 1;
-  const pct = Math.round((consumed / safeTarget) * 100);
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between">
-        <span className={`text-[10px] font-black uppercase tracking-widest ${accent || 'text-slate-500'}`}>{label}</span>
-        <span className="text-xs font-black tabular-nums">
-          {Math.round(consumed)}<span className="text-slate-500"> / {target}{unit}</span>
-          <span className="ml-2 text-slate-600">{pct}%</span>
-        </span>
-      </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-        <div
-          className={`h-full transition-all ${barColor(pct)}`}
-          style={{ width: `${Math.min(100, pct)}%` }}
-        />
-      </div>
-    </div>
-  );
-};
+import NutritionProgressRow from '../components/NutritionProgressRow';
 
 const DietPage = () => {
   const navigate = useNavigate();
@@ -156,7 +128,7 @@ const DietPage = () => {
             </div>
             {me?.nutrition ? (
               <div className="space-y-5">
-                <ProgressRow
+                <NutritionProgressRow
                   label="칼로리"
                   consumed={summary?.total?.kcal || 0}
                   target={me.nutrition.target_kcal}
@@ -164,21 +136,21 @@ const DietPage = () => {
                   accent="text-white"
                 />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-white/5">
-                  <ProgressRow
+                  <NutritionProgressRow
                     label="탄수"
                     consumed={summary?.total?.carbs || 0}
                     target={me.nutrition.target_carbs}
                     unit="g"
                     accent="text-blue-400"
                   />
-                  <ProgressRow
+                  <NutritionProgressRow
                     label="단백"
                     consumed={summary?.total?.protein || 0}
                     target={me.nutrition.target_protein}
                     unit="g"
                     accent="text-orange-400"
                   />
-                  <ProgressRow
+                  <NutritionProgressRow
                     label="지방"
                     consumed={summary?.total?.fat || 0}
                     target={me.nutrition.target_fat}

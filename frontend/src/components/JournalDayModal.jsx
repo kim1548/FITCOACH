@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../api/config';
 import {
   X, Activity, Utensils, MessageSquare, Save, Pencil, RefreshCw, Loader2, Sparkles,
 } from 'lucide-react';
+import NutritionProgressRow from './NutritionProgressRow';
 
 // Ollama + gemma3:4b 가 로컬에 깔리고 동작 검증되면 true로 바꾼다.
 // false 동안에도 과거에 생성돼 DB 에 남아있는 ai_comment 는 그대로 보여준다.
@@ -20,7 +21,7 @@ const formatDateLabel = (iso) => {
   return `${iso} (${dow})`;
 };
 
-const JournalDayModal = ({ date, theme, onClose, onAfterChange }) => {
+const JournalDayModal = ({ date, theme, nutrition, onClose, onAfterChange }) => {
   const isDark = theme === 'dark' || theme === 'design';
   const overlayClass = 'bg-black/60 backdrop-blur-sm';
   const cardClass = isDark ? 'bg-[#16161a] border-white/5 text-white' : 'bg-white border-slate-200 text-slate-900';
@@ -173,19 +174,60 @@ const JournalDayModal = ({ date, theme, onClose, onAfterChange }) => {
                   <span className="text-[10px] font-black uppercase tracking-widest">식단</span>
                 </div>
                 {data.diet ? (
-                  <div className={`p-4 rounded-2xl ${sectionBg} space-y-2`}>
-                    <p className="text-sm font-bold">
-                      총 {data.diet.total.kcal} kcal
-                      <span className={`ml-2 text-xs font-normal ${subText}`}>
-                        탄 {data.diet.total.carbs}g · 단 {data.diet.total.protein}g · 지 {data.diet.total.fat}g
-                      </span>
-                    </p>
-                    {Object.entries(data.diet.by_meal).map(([meal, foods]) => (
-                      <div key={meal} className="text-xs">
-                        <span className="font-bold mr-2">{meal}</span>
-                        <span className={subText}>{foods.map(f => f.food_name).join(', ')}</span>
+                  <div className={`p-4 rounded-2xl ${sectionBg} space-y-4`}>
+                    {nutrition ? (
+                      <div className="space-y-3">
+                        <NutritionProgressRow
+                          label="칼로리"
+                          consumed={data.diet.total.kcal}
+                          target={nutrition.target_kcal}
+                          unit=" kcal"
+                          accent={isDark ? "text-white" : "text-slate-900"}
+                          isDark={isDark}
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-white/5">
+                          <NutritionProgressRow
+                            label="탄수"
+                            consumed={data.diet.total.carbs}
+                            target={nutrition.target_carbs}
+                            unit="g"
+                            accent="text-blue-400"
+                            isDark={isDark}
+                          />
+                          <NutritionProgressRow
+                            label="단백"
+                            consumed={data.diet.total.protein}
+                            target={nutrition.target_protein}
+                            unit="g"
+                            accent="text-orange-400"
+                            isDark={isDark}
+                          />
+                          <NutritionProgressRow
+                            label="지방"
+                            consumed={data.diet.total.fat}
+                            target={nutrition.target_fat}
+                            unit="g"
+                            accent="text-yellow-400"
+                            isDark={isDark}
+                          />
+                        </div>
                       </div>
-                    ))}
+                    ) : (
+                      <p className="text-sm font-bold">
+                        총 {data.diet.total.kcal} kcal
+                        <span className={`ml-2 text-xs font-normal ${subText}`}>
+                          탄 {data.diet.total.carbs}g · 단 {data.diet.total.protein}g · 지 {data.diet.total.fat}g
+                        </span>
+                      </p>
+                    )}
+                    <div className="space-y-1 pt-2 border-t border-white/5">
+                      {Object.entries(data.diet.by_meal).map(([meal, foods]) => (
+                        <div key={meal} className="text-xs">
+                          <span className="font-bold mr-2">{meal}</span>
+                          <span className={subText}>{foods.map(f => f.food_name).join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <p className={`text-sm ${subText}`}>이 날 식단 기록이 없어요.</p>

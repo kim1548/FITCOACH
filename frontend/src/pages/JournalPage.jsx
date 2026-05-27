@@ -29,6 +29,7 @@ const JournalPage = ({ theme }) => {
   const [calendar, setCalendar] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [nutrition, setNutrition] = useState(null);
 
   const fetchCalendar = useCallback(() => {
     setLoading(true);
@@ -42,6 +43,13 @@ const JournalPage = ({ theme }) => {
   }, [year, month]);
 
   useEffect(() => { fetchCalendar(); }, [fetchCalendar]);
+
+  // 영양 목표 한 번만 받아서 모달에 내려준다 (모달 매번 fetch 안 하도록).
+  useEffect(() => {
+    axios.get(`${API_BASE_URL}/user/me`, { headers: authHeaders() })
+      .then(res => setNutrition(res.data?.nutrition || null))
+      .catch(() => setNutrition(null));
+  }, []);
 
   const goPrevMonth = () => {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
@@ -166,6 +174,7 @@ const JournalPage = ({ theme }) => {
         <JournalDayModal
           date={selectedDate}
           theme={theme}
+          nutrition={nutrition}
           onClose={() => setSelectedDate(null)}
           onAfterChange={fetchCalendar}
         />
