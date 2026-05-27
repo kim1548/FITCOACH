@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import {
-  X, Activity, Utensils, MessageSquare, Save, Pencil, RefreshCw, Loader2,
+  X, Activity, Utensils, MessageSquare, Save, Pencil, RefreshCw, Loader2, Sparkles,
 } from 'lucide-react';
+
+// Ollama + gemma3:4b 가 로컬에 깔리고 동작 검증되면 true로 바꾼다.
+// false 동안에도 과거에 생성돼 DB 에 남아있는 ai_comment 는 그대로 보여준다.
+const AI_ENABLED = false;
 
 const authHeaders = () => {
   const token = localStorage.getItem('token');
@@ -181,18 +185,20 @@ const JournalDayModal = ({ date, theme, onClose, onAfterChange }) => {
                 {data.ai_comment ? (
                   <div className={`p-4 rounded-2xl ${sectionBg} border border-blue-500/20`}>
                     <p className="text-sm leading-relaxed italic">{data.ai_comment}</p>
-                    <div className="mt-3 flex items-center justify-end">
-                      <button
-                        onClick={handleRegenerate}
-                        disabled={regenerating}
-                        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'} disabled:opacity-50`}
-                      >
-                        {regenerating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                        다시 생성
-                      </button>
-                    </div>
+                    {AI_ENABLED && (
+                      <div className="mt-3 flex items-center justify-end">
+                        <button
+                          onClick={handleRegenerate}
+                          disabled={regenerating}
+                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'} disabled:opacity-50`}
+                        >
+                          {regenerating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                          다시 생성
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : (
+                ) : AI_ENABLED ? (
                   hasAnyData ? (
                     <button
                       onClick={handleRegenerate}
@@ -208,6 +214,13 @@ const JournalDayModal = ({ date, theme, onClose, onAfterChange }) => {
                   ) : (
                     <p className={`text-sm ${subText}`}>코멘트할 데이터가 없어요.</p>
                   )
+                ) : (
+                  <div className={`p-4 rounded-2xl ${sectionBg} flex items-center gap-3`}>
+                    <Sparkles size={18} className="text-blue-400 flex-shrink-0" />
+                    <p className={`text-sm leading-relaxed ${subText}`}>
+                      AI 코멘트 기능은 준비 중입니다. 로컬 AI 모델 연결 후 활성화될 예정이에요.
+                    </p>
+                  </div>
                 )}
               </section>
 
