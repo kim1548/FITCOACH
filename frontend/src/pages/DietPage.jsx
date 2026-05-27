@@ -200,33 +200,6 @@ const DietPage = () => {
             )}
           </section>
 
-          {/* --- [대시보드: 전체 에너지 요약] --- */}
-          <section className="bg-[#16161a] rounded-[3rem] p-10 border border-white/5 shadow-2xl relative overflow-hidden">
-            {/* 배경 데코레이션 */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 blur-[100px] -z-10" />
-            
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Total Energy Intake</p>
-            <div className="flex items-baseline gap-3">
-              <span className="text-7xl font-black italic text-white tracking-tighter">
-                {Math.round(summary?.total?.kcal || 0)}
-              </span>
-              <span className="text-lg font-bold text-slate-500 italic uppercase">kcal</span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-8 mt-12 pt-10 border-t border-white/5">
-              {[
-                { label: 'Carbs', val: summary?.total?.carbs || 0, color: 'text-blue-400' },
-                { label: 'Protein', val: summary?.total?.protein || 0, color: 'text-orange-400' },
-                { label: 'Fat', val: summary?.total?.fat || 0, color: 'text-yellow-400' }
-              ].map(n => (
-                <div key={n.label}>
-                  <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">{n.label}</p>
-                  <p className={`text-xl font-black ${n.color}`}>{Math.round(n.val)}<span className="text-[10px] ml-1 text-slate-500">g</span></p>
-                </div>
-              ))}
-            </div>
-          </section>
-
           {/* 인공지능 피드백 추가 */}
           <div className="w-full max-w-6xl mx-auto px-6 pb-20"> {/* 폭은 설정 페이지처럼 5xl로 통일 */}
             <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 shadow-xl backdrop-blur-md">
