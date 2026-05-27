@@ -27,7 +27,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(CURRE
 
 DB_PATH = os.path.join(BASE_DIR, "data", "food_info2.csv") 
 MODEL_PATH = os.path.join(BASE_DIR, "models", "food", "efficientnetb0.pt") 
-YOLO_PATH = os.path.join(BASE_DIR, "models", "food", "yolov11s.pt")         
+# YOLO_PATH = os.path.join(BASE_DIR, "models", "food", "yolov11s.pt")         
+YOLO_PATH = os.path.join(BASE_DIR, "models", "food", "best13689.pt")         
 FOOD_CSV = os.path.join(BASE_DIR, "data", "food_master_음식_utf8.csv")         
 PROCESS_CSV = os.path.join(BASE_DIR, "data", "food_master_가공_utf8.csv")     
 
@@ -154,7 +155,8 @@ async def analyze_food(file: UploadFile = File(...)):
         original_img.save(main_path, "JPEG")
 
         # 🎯 1. COCO 표준 인덱스로 수정: 45 = bowl(그릇), 55 = plate(접시)
-        results = yolo_model.predict(original_img, conf=0.25, classes=[45, 55])    
+        # results = yolo_model.predict(original_img, conf=0.25, classes=[45, 55])    
+        results = yolo_model.predict(original_img, conf=0.25, classes=[0])    
         
         final_detected_items = [] # ⭐️ 중복 제거 대신 찾은 순서대로 다 담을 리스트로 변경
         crop_targets = []

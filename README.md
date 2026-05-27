@@ -63,6 +63,9 @@ python3.12 -m venv venv             # macOS/Linux
 .\venv\Scripts\activate              # Windows
 source venv/bin/activate             # macOS/Linux
 
+# 가상환경에 아래와 같이 torch==2.11.0+cpu torchvision==0.26.0+cpu torchaudio==2.11.0+cpu <-- 3가지를 따로 설치하세요(비공식버전이라 따로 설치해야 합니다.)
+pip install torch==2.11.0+cpu torchvision==0.26.0+cpu torchaudio==2.11.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+
 # 의존성 설치 (몇 분 소요)
 pip install -r requirements.txt
 

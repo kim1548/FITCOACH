@@ -22,7 +22,7 @@ const DietPage = () => {
       const foodData = `칼로리 ${summary?.total?.kcal}kcal, 탄수화물 ${summary?.total?.carbs}g, 단백질 ${summary?.total?.protein}g, 지방 ${summary?.total?.fat}g`;
       const workoutData = "오늘의 운동 없음"; // 또는 실제 데이터
 
-      const response = await axios.post(`${baseUrl}/ai-feedback`, {
+      const response = await axios.post(`${API_BASE_URL}/ai-feedback`, {
         type: "TOTAL_DIET",
         // workout_data: "", // 키 이름 주의 (FastAPI 필드명과 일치)
         food_data: foodData        // 키 이름 주의
