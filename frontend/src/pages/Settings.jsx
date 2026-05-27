@@ -67,22 +67,7 @@ const Settings = ({ theme, setTheme }) => {
         </div>
       </div>
 
-      {/* 3. 목표 설정 (원본 내용 복구) */}
-      <div className="space-y-4">
-        <SectionTitle>Goal Settings</SectionTitle>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/5 hover:border-white/10 transition-colors">
-            <p className="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-tighter">현재 목표</p>
-            <p className="text-xl font-black text-blue-500 italic">체지방 -3kg</p>
-          </div>
-          <div className="p-6 bg-white/5 rounded-[2.5rem] border border-white/5 hover:border-white/10 transition-colors">
-            <p className="text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-tighter">일일 권장 칼로리</p>
-            <p className="text-xl font-black text-white italic">2,100 kcal</p>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. 계정 및 데이터 관리 (원본 내용 복구) */}
+      {/* 3. 계정 및 데이터 관리 */}
       <div className="space-y-4">
         <SectionTitle>Data Management</SectionTitle>
         <div className="p-2 bg-white/5 rounded-[2.5rem] border border-white/5">
