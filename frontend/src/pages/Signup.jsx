@@ -56,7 +56,8 @@ const Signup = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto my-10 p-8 bg-white rounded-3xl shadow-2xl border border-slate-100">
+    <div className="fixed inset-0 overflow-y-auto bg-slate-50 py-10 px-4">
+      <div className="max-w-md mx-auto p-8 bg-white rounded-3xl shadow-2xl border border-slate-100">
       <h2 className="text-3xl font-black mb-2 text-center italic text-slate-800">SIGN UP</h2>
       <p className="text-center text-xs text-slate-500 mb-8 tracking-widest font-bold uppercase">
         FITCOACH 시작하기
@@ -167,6 +168,7 @@ const Signup = () => {
         >
           로그인 하러가기
         </Link>
+      </div>
       </div>
     </div>
   );
