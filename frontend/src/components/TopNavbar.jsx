@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LogIn, LogOut, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 // 💡 URL 파라미터로 들어오는 값을 어떻게 보여줄지 정의
@@ -78,15 +79,41 @@ const TopNavbar = ({ s }) => {
         })}
       </div>
 
-      {/* 오른쪽: 로그아웃 버튼 등 기존 디자인 유지 */}
-      <div className="flex items-center gap-4">
-        {user && (
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline text-[11px] font-bold text-slate-500">{user.username}님</span>
-            <button onClick={handleLogout} className="text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-500 border border-white/10 rounded-lg transition-all">
-              Logout
+      {/* 오른쪽: 로그인 상태에 따라 (로그인 + 회원가입) 또는 (사용자명 + 로그아웃) */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {user ? (
+          <>
+            <span className="hidden sm:inline text-[11px] font-bold text-slate-500">
+              {user.username}님
+            </span>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-500 border border-white/10 rounded-lg transition-all"
+              aria-label="로그아웃"
+            >
+              <LogOut size={12} />
+              <span className="hidden sm:inline">Logout</span>
             </button>
-          </div>
+          </>
+        ) : (
+          <>
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 border border-white/10 rounded-lg transition-all"
+              aria-label="로그인"
+            >
+              <LogIn size={12} />
+              <span className="hidden sm:inline">Login</span>
+            </Link>
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-blue-600/15 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg transition-all"
+              aria-label="회원가입"
+            >
+              <UserPlus size={12} />
+              <span className="hidden sm:inline">Sign Up</span>
+            </Link>
+          </>
         )}
       </div>
     </nav>
