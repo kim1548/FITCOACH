@@ -1,6 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { API_BASE_URL } from "../api/config";
+import { useAuth } from "../context/AuthContext";
 
 const Settings = ({ theme, setTheme }) => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(
+      "정말 탈퇴하시겠습니까?\n\n계정과 함께 모든 운동·식단·저널 기록이 영구 삭제되며 복구할 수 없습니다."
+    )) return;
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API_BASE_URL}/user/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("회원 탈퇴가 완료되었습니다.");
+      logout();
+      navigate("/signup", { replace: true });
+    } catch (err) {
+      alert("탈퇴 실패: " + (err?.response?.data?.detail || "알 수 없는 오류"));
+      setDeleting(false);
+    }
+  };
+
   // 섹션 타이틀 컴포넌트
   const SectionTitle = ({ children }) => (
     <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-2">
@@ -67,13 +94,21 @@ const Settings = ({ theme, setTheme }) => {
         </div>
       </div>
 
-      {/* 3. 계정 및 데이터 관리 */}
+      {/* 3. 계정 관리 */}
       <div className="space-y-4">
-        <SectionTitle>Data Management</SectionTitle>
+        <SectionTitle>Account</SectionTitle>
         <div className="p-2 bg-white/5 rounded-[2.5rem] border border-white/5">
-          <button className="w-full text-left p-5 hover:bg-red-500/10 rounded-[1.8rem] transition-colors group">
-            <p className="text-sm font-bold text-red-500/80 group-hover:text-red-500 uppercase tracking-tighter">모든 기록 초기화</p>
-            <p className="text-[11px] text-slate-600 italic">주의: 삭제된 데이터는 복구할 수 없습니다.</p>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deleting}
+            className="w-full text-left p-5 hover:bg-red-500/10 rounded-[1.8rem] transition-colors group disabled:opacity-50"
+          >
+            <p className="text-sm font-bold text-red-500/80 group-hover:text-red-500 uppercase tracking-tighter">
+              {deleting ? "탈퇴 처리 중..." : "회원 탈퇴"}
+            </p>
+            <p className="text-[11px] text-slate-600 italic">
+              계정과 모든 운동·식단·저널 기록이 영구 삭제됩니다. 복구할 수 없습니다.
+            </p>
           </button>
         </div>
       </div>
