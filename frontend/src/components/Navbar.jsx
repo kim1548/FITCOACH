@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 // 아이콘 추가: ClipboardList(계획), PlayCircle(실행)
-import { ClipboardList, PlayCircle, BookText, Utensils, Settings as SettingsIcon } from "lucide-react";
+import { ClipboardList, PlayCircle, BookText, Utensils } from "lucide-react";
 
 const Navbar = ({ s }) => {
   const location = useLocation();
@@ -29,7 +29,6 @@ const Navbar = ({ s }) => {
       <NavButton to="/formcheck" icon={<PlayCircle size={22} />} label="Form Check" />
       
       <NavButton to="/meals" icon={<Utensils size={22} />} label="MEALS" />
-      <NavButton to="/settings" icon={<SettingsIcon size={22} />} label="Set" />
     </nav>
   );
 };

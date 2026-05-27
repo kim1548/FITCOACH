@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogIn, LogOut, UserPlus } from "lucide-react";
+import { LogIn, LogOut, UserPlus, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 // 💡 URL 파라미터로 들어오는 값을 어떻게 보여줄지 정의
@@ -86,6 +86,14 @@ const TopNavbar = ({ s }) => {
             <span className="hidden sm:inline text-[11px] font-bold text-slate-500">
               {user.username}님
             </span>
+            <Link
+              to="/settings"
+              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
+              aria-label="설정"
+            >
+              <SettingsIcon size={12} />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-500 border border-white/10 rounded-lg transition-all"

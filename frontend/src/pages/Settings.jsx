@@ -1,9 +1,6 @@
 import React from 'react';
-import { useNavigate } from "react-router-dom";
 
-const Settings = ({ theme, setTheme, s }) => {
-  const navigate = useNavigate();
-
+const Settings = ({ theme, setTheme }) => {
   // 섹션 타이틀 컴포넌트
   const SectionTitle = ({ children }) => (
     <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 ml-2">
@@ -28,29 +25,22 @@ const Settings = ({ theme, setTheme, s }) => {
         <p className="text-slate-500 text-xs font-medium">서비스 환경 및 개인 설정을 관리합니다.</p>
       </div>
 
-      {/* 1. 테마 및 디자인 모드 설정 */}
+      {/* 1. 테마 모드 설정 */}
       <div className="space-y-4">
         <SectionTitle>Display Mode</SectionTitle>
-        <div className="grid grid-cols-3 gap-3 p-2 bg-white/5 rounded-[2.5rem] border border-white/5">
-          <button 
+        <div className="grid grid-cols-2 gap-3 p-2 bg-white/5 rounded-[2.5rem] border border-white/5">
+          <button
             onClick={() => setTheme('dark')}
             className={`py-4 rounded-[1.8rem] text-xs font-black transition-all ${theme === 'dark' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300'}`}
           >
             DARK
           </button>
 
-          <button 
+          <button
             onClick={() => setTheme('white')}
             className={`py-4 rounded-[1.8rem] text-xs font-black transition-all ${theme === 'white' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300'}`}
           >
             LIGHT
-          </button>
-
-          <button 
-            onClick={() => navigate("/designa")} 
-            className="py-4 rounded-[1.8rem] bg-white/10 text-xs font-black text-white hover:bg-blue-600 transition-all uppercase"
-          >
-            Design A
           </button>
         </div>
       </div>
