@@ -15,7 +15,8 @@ from app.api.v1.endpoints import exercise, diet, auth
 from pydantic import BaseModel  # 추가
 import httpx
 from fastapi.staticfiles import StaticFiles
-from app.api.v1.endpoints import routine, journal
+from app.api.v1.endpoints import routine, journal, user as user_endpoint
+from sqlalchemy import inspect, text
 
 app = FastAPI()
 
@@ -37,6 +38,23 @@ app.add_middleware(
 
 # 테이블 생성 (이 한 줄이 모든 모델의 테이블을 test.db에 만듭니다)
 Base.metadata.create_all(bind=engine)
+
+
+def _ensure_users_age_column():
+    """create_all 은 기존 테이블에 새 컬럼을 추가하지 않으므로, users.age 가
+    빠져있으면 한 번만 ALTER TABLE 로 채워준다."""
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+    cols = {c["name"] for c in inspector.get_columns("users")}
+    if "age" not in cols:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN age INTEGER"))
+            conn.commit()
+        print("✅ users.age 컬럼 추가됨 (기존 유저는 NULL)")
+
+
+_ensure_users_age_column()
 
 # 1. 현재 main.py 파일의 위치를 기준으로 경로 설정
 # main.py가 backend/app/main.py에 있다면:
@@ -86,6 +104,7 @@ app.include_router(exercise.router, prefix="/api/v1/exercise", tags=["exercise"]
 app.include_router(diet.router, prefix="/api/v1/diet", tags=["diet"])
 app.include_router(routine.router, prefix="/api/v1/routine", tags=["routine"])
 app.include_router(journal.router, prefix="/api/v1/journal", tags=["journal"])
+app.include_router(user_endpoint.router, prefix="/api/v1/user", tags=["user"])
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

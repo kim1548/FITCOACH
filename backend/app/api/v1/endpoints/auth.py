@@ -26,6 +26,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     gender: str
+    age: int
     height: float
     weight: float
     lifestyle: str
@@ -58,8 +59,8 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     new_user = User(
         username=user_data.username,
         password=hashed_pwd,
-        # ... 나머지 필드들 ...
         gender=user_data.gender,
+        age=user_data.age,
         height=user_data.height,
         weight=user_data.weight,
         lifestyle=user_data.lifestyle,
