@@ -19,7 +19,7 @@ const ROUTE_CONFIG = {
   // "ANALYSIS": { name: "실시간 분석", link: null }
 };
 
-const TopNavbar = ({ s }) => {
+const TopNavbar = ({ s, onOpenSettings }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -86,14 +86,14 @@ const TopNavbar = ({ s }) => {
             <span className="hidden sm:inline text-[11px] font-bold text-slate-500">
               {user.username}님
             </span>
-            <Link
-              to="/settings"
+            <button
+              onClick={onOpenSettings}
               className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
               aria-label="설정"
             >
               <SettingsIcon size={12} />
               <span className="hidden sm:inline">Settings</span>
-            </Link>
+            </button>
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-500 border border-white/10 rounded-lg transition-all"

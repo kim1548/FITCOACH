@@ -37,20 +37,10 @@ const Settings = ({ theme, setTheme }) => {
 
   return (
 
-    /* 💡 해결 포인트:
-      1. max-w-5xl: 다른 페이지와 폭을 똑같이 맞춤
-      2. pt-[120px] pb-[200px]: 상단 네비바와 하단 네비바(2배 높음)에 가려지지 않게 물리적 여백 확보
-      3. min-h-screen: 스크롤이 가능하도록 최소 높이 보장
-    */
-    
-    <div className="w-full max-w-6xl px-6 pt-[50px] pb-[100px] space-y-8 overflow-y-scroll">
-    {/* <div className="fixed inset-0 bg-[#0c0c0e] text-white overflow-y-scroll pt-[50px] pb-[100px]" style={{ scrollbarGutter: 'stable' }}> */}
-      
-      {/* 상단 헤더 */}
-      <div className="flex flex-col gap-1 ml-2">
-        <h2 className="text-3xl font-black text-white tracking-tighter italic uppercase">SETTINGS</h2>
-        <p className="text-slate-500 text-xs font-medium">서비스 환경 및 개인 설정을 관리합니다.</p>
-      </div>
+    /* Drawer 안에 들어가는 컨텐츠라 외곽 폭/패딩 제약 없음. 헤더는 Drawer 가 제공. */
+    <div className="space-y-8">
+
+      <p className="text-slate-500 text-xs font-medium">서비스 환경 및 개인 설정을 관리합니다.</p>
 
       {/* 1. 테마 모드 설정 */}
       <div className="space-y-4">

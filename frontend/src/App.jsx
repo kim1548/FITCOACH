@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import TopNavbar from "./components/TopNavbar";
 import Navbar from "./components/Navbar";
+import SettingsDrawer from "./components/SettingsDrawer";
 import DietPage from "./pages/DietPage";
 import JournalPage from "./pages/JournalPage";
-import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -34,6 +34,7 @@ const themeStyles = {
 
 const AppContent = () => {
   const [theme, setTheme] = useState("dark");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const s = themeStyles[theme];
 
   return (
@@ -51,16 +52,16 @@ const AppContent = () => {
         element={
           <div className={`fixed inset-0 ${s.bg} ${s.text} flex flex-col overflow-hidden`}>
             {/* 🟢 상단 네비바 고정 */}
-            <TopNavbar s={s} />
+            <TopNavbar s={s} onOpenSettings={() => setSettingsOpen(true)} />
             <main className="flex-1 relative overflow-hidden flex justify-center">
               <Routes>
                 <Route path="/" element={<Navigate to="/Dashboard" replace />} />
-                
+
                 {/* 1. 루틴 계획 (새로운 중량 트래커) */}
                 <Route path="/program" element={<RoutinePlanPage theme={theme} />} />
                 <Route path="/program/play" element={<ProgramPlayPage theme={theme} />} />
                 <Route path="/program/summary" element={<WorkoutSummary theme={theme} />} />
-                
+
                 {/* 2. Form Check (AI 자세 분석) */}
                 <Route path="/formcheck" element={<RoutinePlaySelectPage theme={theme} />} />
                 <Route path="/formcheck/:exId" element={<RoutinePlayPage theme={theme} />} />
@@ -69,11 +70,17 @@ const AppContent = () => {
                 <Route path="/meals/add" element={<DietAddPage />} />
                 <Route path="/journal" element={<JournalPage theme={theme} />} />
                 <Route path="/Dashboard" element={<Dashboard theme={theme} />} />
-                <Route path="/settings" element={<Settings theme={theme} setTheme={setTheme} />} />
               </Routes>
             </main>
             {/* 하단 네비바 고정 */}
             <Navbar s={s} />
+            {/* Settings drawer — 라우트 대신 우측 슬라이드 오버레이 */}
+            <SettingsDrawer
+              isOpen={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              theme={theme}
+              setTheme={setTheme}
+            />
           </div>
         }
       />
