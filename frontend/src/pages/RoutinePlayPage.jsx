@@ -1,119 +1,180 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import ExerciseAnalyzer from "../features/exercise/ExerciseAnalyzer";
-import FeedbackDetail from "./RoutineLogPage";
-import { ChevronLeft, Upload, Activity } from "lucide-react";
+import React, { useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import ExerciseAnalyzer from '../features/exercise/ExerciseAnalyzer';
+import FeedbackDetail from './RoutineLogPage';
+import PageSurface from '../components/PageSurface';
+import { CAMERA_GUIDE } from '../constants/exercise';
+import usePageTitle from '../hooks/usePageTitle';
 
-const ExercisePage = ({ theme }) => {
+/**
+ * /formcheck/:exId — AI 자세 분석 세션 (Editorial Magazine 톤).
+ *
+ * 흐름: 영상 업로드 안내 → MediaPipe Pose 실시간 분석(카운터·각도 오버레이) →
+ *      종료 시 FeedbackDetail 매거진 리포트.
+ */
+
+const RoutinePlayPage = () => {
   const { exId } = useParams();
+  usePageTitle(`${exId || 'Form Check'} · FitCoach`);
+
   const navigate = useNavigate();
-  
-  // 상태 관리
+
   const [isStarted, setIsStarted] = useState(false);
   const [analysisResult, setAnalysisResult] = useState({ counter: 0, angle: 0 });
-  const [finalData, setFinalData] = useState(null); 
+  const [finalData, setFinalData] = useState(null);
   const analyzerRef = useRef(null);
 
-  const isDark = theme === 'dark' || theme === 'design';
-
-  // 💡 무한 로딩 해결 포인트: 데이터가 들어오면 즉시 결과창으로 전환
   const handleAnalysisComplete = (data) => {
-    if (data) {
-      console.log("분석 완료 데이터 수신:", data);
-      setFinalData(data);
-    }
+    if (data) setFinalData(data);
   };
 
+  const handleReset = () => {
+    setFinalData(null);
+    setIsStarted(false);
+    setAnalysisResult({ counter: 0, angle: 0 });
+  };
+
+  const guideText = CAMERA_GUIDE[exId];
+
   return (
-    <div className={`fixed inset-0 ${isDark ? "bg-[#0c0c0e]" : "bg-slate-50"} text-white flex flex-col`}>
-      
-      {/* 🟢 DietPage와 100% 일치하는 헤더 폭 (max-w-6xl) */}
-      {/* <header className={`w-full max-w-6xl mx-auto flex justify-between items-center p-6 border-b ${isDark ? 'border-white/5 bg-[#0c0c0e]/80' : 'border-slate-200 bg-white/80'} backdrop-blur-md z-[100] sticky top-0`}>
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-          <ChevronLeft size={24} className={isDark ? "text-white" : "text-black"} />
-        </button>
-        <h2 className="text-[10px] font-black text-blue-500 italic uppercase tracking-[0.3em]">{exId} Analysis</h2>
-        <div className="w-10"></div>
-      </header> */}
-      <header className={`w-full h-[50px] max-w-6xl mx-auto flex justify-between items-center px-6 border-b ${isDark ? 'border-white/5 bg-[#0c0c0e]' : 'border-slate-200 bg-white'} z-[100]`}>
-        <button onClick={() => navigate(-1)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-          <ChevronLeft size={20} className={isDark ? "text-white" : "text-black"} />
-        </button>
-        <h2 className="text-[10px] font-black text-blue-500 italic uppercase tracking-[0.3em]">{exId} Analysis</h2>
-        <div className="w-8"></div>
-      </header>
+    <div
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in fade-in duration-300"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      <PageSurface maxWidth={1200}>
+        <div className="w-full px-6 md:px-12 py-8">
 
-      {/* 🟢 메인 컨텐츠 영역: DietPage와 폭 일치 */}
-      <main className="w-full max-w-6xl mx-auto relative overflow-hidden" style={{ height: 'calc(100vh - 150px)' }}>
-        {!finalData ? (
-          <div className="w-full h-full relative bg-black overflow-hidden">
-            {/* 1. 분석기 컴포넌트 (ref로 파일 핸들링 연결) */}
-            <ExerciseAnalyzer 
-              ref={analyzerRef}
-              exercise={exId}
-              onResultUpdate={setAnalysisResult}
-              onAnalysisComplete={handleAnalysisComplete}
-            />
+          {/* Back link */}
+          <button
+            onClick={() => navigate('/formcheck')}
+            className="font-mono text-[11px] text-taupe hover:text-ink tracking-meta uppercase mb-6 transition-colors"
+          >
+            ← Form Check library
+          </button>
 
-            {/* 2. 업로드 전 가이드 (스마트폰 가림 현상 해결) */}
-            {!isStarted && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                <div className="text-center px-6">
-                  <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/30">
-                    <Upload size={32} className="text-blue-500" />
+          {!finalData ? (
+            <>
+              {/* Header */}
+              <header className="pb-6">
+                <div className="flex items-baseline justify-between mb-3">
+                  <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                    — Session · Form Check
                   </div>
-                  <h3 className="text-2xl font-black text-white mb-2">{exId} 분석 대기 중</h3>
-                  <p className="text-slate-400 text-sm mb-8">영상을 업로드하면 분석이 즉시 시작됩니다.</p>
-                  
-                  <label className="inline-block px-10 py-5 bg-blue-600 text-white rounded-2xl font-black cursor-pointer hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95">
-                    영상 업로드하기
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      accept="video/*" 
-                      onChange={(e) => {
-                        if (analyzerRef.current) {
-                          analyzerRef.current.handleFileUpload(e);
-                          setIsStarted(true);
-                        }
-                      }} 
-                    />
-                  </label>
+                  <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                    {isStarted ? 'Analyzing…' : 'Awaiting upload'}
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* 3. 실시간 분석 UI (영상 위 오버레이) */}
-            {isStarted && (
-              <div className="absolute bottom-8 left-8 right-8 z-40 pointer-events-none flex justify-between items-end">
-                <div className="flex flex-col">
-                  <span className="text-blue-500 text-[10px] font-black uppercase tracking-widest mb-2">Count</span>
-                  <span className="text-5xl font-black text-white italic leading-none drop-shadow-2xl">
-                    {String(analysisResult.counter || 0).padStart(2, '0')}
+                <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+                  {exId}, <em className="italic text-accent-gold">analyzed.</em>
+                </h1>
+                {guideText && (
+                  <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+                    {guideText}
+                  </p>
+                )}
+              </header>
+
+              {/* Video frame */}
+              <div className="border-t border-ink/15 pt-4">
+                <div className="font-mono text-[10px] text-taupe tracking-meta uppercase mb-2">
+                  Capture
+                </div>
+
+                <div className="relative w-full aspect-video bg-black border border-ink/15 overflow-hidden">
+                  <ExerciseAnalyzer
+                    ref={analyzerRef}
+                    exercise={exId}
+                    onResultUpdate={setAnalysisResult}
+                    onAnalysisComplete={handleAnalysisComplete}
+                  />
+
+                  {/* Upload overlay */}
+                  {!isStarted && (
+                    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 backdrop-blur-sm">
+                      <div className="text-center px-6 max-w-[420px]">
+                        <div className="font-mono text-[10px] text-accent-red tracking-label uppercase mb-4">
+                          — Upload your evidence
+                        </div>
+                        <h2 className="font-display text-3xl md:text-4xl text-ink leading-[1.05] tracking-tight mb-3">
+                          {exId},<br />
+                          <em className="italic text-accent-gold">on record.</em>
+                        </h2>
+                        <p className="font-display italic text-sm text-taupe leading-relaxed mb-8">
+                          영상을 업로드하면 분석이 즉시 시작됩니다.
+                          한 세트 분량을 끊김 없이 담는 것을 권장합니다.
+                        </p>
+
+                        <label className="inline-block font-mono text-[11px] tracking-label uppercase px-6 py-3 border border-accent-red text-accent-red hover:bg-accent-red hover:text-ink transition-colors cursor-pointer">
+                          → Upload video
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="video/*"
+                            onChange={(e) => {
+                              if (analyzerRef.current && e.target.files?.[0]) {
+                                analyzerRef.current.handleFileUpload(e);
+                                setIsStarted(true);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Live counter overlay */}
+                  {isStarted && (
+                    <div className="absolute bottom-6 left-6 right-6 z-20 pointer-events-none flex justify-between items-end">
+                      <div>
+                        <div className="font-mono text-[10px] text-accent-red tracking-label uppercase mb-1">
+                          — Reps
+                        </div>
+                        <div className="font-display text-6xl md:text-7xl text-ink tabular-nums leading-none drop-shadow-[0_4px_18px_rgba(0,0,0,0.8)]">
+                          {String(analysisResult.counter || 0).padStart(2, '0')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-[10px] text-accent-gold tracking-label uppercase mb-1">
+                          Angle
+                        </div>
+                        <div className="font-display text-3xl md:text-4xl text-ink tabular-nums leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                          {Math.round(analysisResult.angle || 0)}°
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-5 mt-3 font-mono text-[9px] text-hint tracking-meta uppercase">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-[5px] h-[5px] rounded-full bg-accent-red" />
+                    Detected error
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-[5px] h-[5px] rounded-full bg-accent-gold" />
+                    Live metric
                   </span>
                 </div>
-                <div className="text-right pb-4">
-                  <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Angle</span>
-                  <span className="text-3xl font-black text-white drop-shadow-lg">{Math.round(analysisResult.angle)}°</span>
-                </div>
               </div>
-            )}
-          </div>
-        ) : (
-          /* 4. 분석 결과 표시 (무한 로딩 해결 포인트) */
-          <div className="h-full overflow-y-auto px-6 py-10">
-            <FeedbackDetail 
-              result={finalData} 
-              exerciseName={exId} 
-              theme={theme}
-              onReset={() => { setFinalData(null); setIsStarted(false); }}
+
+              {/* Footer */}
+              <div className="flex justify-between items-center pt-6 mt-10 border-t border-ink/15 font-mono text-[11px] text-hint tracking-meta">
+                <span className="uppercase">— FITCOACH —</span>
+                <span className="uppercase text-taupe">Form Check · {exId}</span>
+              </div>
+            </>
+          ) : (
+            <FeedbackDetail
+              result={finalData}
+              exerciseName={exId}
+              onReset={handleReset}
             />
-          </div>
-        )}
-      </main>
-      <footer className="h-[100px] w-full bg-transparent flex-shrink-0" />
+          )}
+        </div>
+      </PageSurface>
     </div>
   );
 };
 
-export default ExercisePage;
+export default RoutinePlayPage;

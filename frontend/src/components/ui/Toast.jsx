@@ -1,0 +1,107 @@
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
+/**
+ * Toast 시스템 — 잠깐 떠올랐다 사라지는 알림 (Editorial Magazine 톤).
+ *
+ * 사용 예:
+ *   const toast = useToast();
+ *   toast.success('기록을 저장했습니다');
+ *   toast.error('저장에 실패했습니다');
+ *   toast.info('곧 새 운동이 추가됩니다');
+ *
+ * App.jsx 에서 <ToastProvider> 로 트리를 감싸야 동작한다.
+ */
+
+const ToastContext = createContext(null);
+
+const DEFAULT_DURATION = 3500;
+
+export const ToastProvider = ({ children }) => {
+  const [toasts, setToasts] = useState([]);
+
+  const remove = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const push = useCallback((toast) => {
+    const id = `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((prev) => [...prev, { id, ...toast }]);
+    return id;
+  }, []);
+
+  const api = useMemo(
+    () => ({
+      success: (msg, opts) => push({ variant: 'success', msg, ...opts }),
+      error:   (msg, opts) => push({ variant: 'error',   msg, ...opts }),
+      info:    (msg, opts) => push({ variant: 'info',    msg, ...opts }),
+      dismiss: remove,
+    }),
+    [push, remove],
+  );
+
+  return (
+    <ToastContext.Provider value={api}>
+      {children}
+      <ToastContainer toasts={toasts} onDismiss={remove} />
+    </ToastContext.Provider>
+  );
+};
+
+export const useToast = () => {
+  const ctx = useContext(ToastContext);
+  if (!ctx) {
+    throw new Error('useToast must be used inside <ToastProvider>');
+  }
+  return ctx;
+};
+
+// ============================================================
+// Container + Item
+// ============================================================
+const ToastContainer = ({ toasts, onDismiss }) => (
+  <div className="fixed top-[88px] right-4 md:right-8 z-[500] flex flex-col gap-2 pointer-events-none w-[calc(100%-2rem)] md:w-auto max-w-[420px]">
+    {toasts.map((t) => (
+      <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />
+    ))}
+  </div>
+);
+
+const VARIANT_META = {
+  success: { label: '— Done',   ringCls: 'border-accent-gold/45', accentCls: 'text-accent-gold' },
+  error:   { label: '— Failed', ringCls: 'border-accent-red/50',  accentCls: 'text-accent-red'  },
+  info:    { label: '— Note',   ringCls: 'border-ink/20',         accentCls: 'text-ink'         },
+};
+
+const ToastItem = ({ toast, onDismiss }) => {
+  const { id, variant = 'info', msg, duration = DEFAULT_DURATION } = toast;
+  const meta = VARIANT_META[variant] || VARIANT_META.info;
+
+  useEffect(() => {
+    if (!duration) return;
+    const timer = setTimeout(() => onDismiss(id), duration);
+    return () => clearTimeout(timer);
+  }, [id, duration, onDismiss]);
+
+  return (
+    <div
+      role="status"
+      className={`pointer-events-auto bg-paper border ${meta.ringCls} px-4 py-3 min-w-[260px] shadow-2xl animate-in slide-in-from-right-4 fade-in duration-200`}
+    >
+      <div className="flex items-baseline justify-between gap-3 mb-1">
+        <div className={`font-mono text-[10px] tracking-label uppercase ${meta.accentCls}`}>
+          {meta.label}
+        </div>
+        <button
+          onClick={() => onDismiss(id)}
+          className="font-mono text-[10px] tracking-meta uppercase text-hint hover:text-ink transition-colors"
+          aria-label="닫기"
+        >
+          ×
+        </button>
+      </div>
+      <p className="font-display italic text-[14px] text-ink leading-snug m-0 whitespace-pre-line">
+        {msg}
+      </p>
+    </div>
+  );
+};

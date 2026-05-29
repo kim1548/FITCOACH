@@ -1,10 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import JournalDayModal from '../components/JournalDayModal';
+import PageSurface from '../components/PageSurface';
+import usePageTitle from '../hooks/usePageTitle';
 
-const WEEK_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEK_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTH_LABELS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 
 const authHeaders = () => {
   const token = localStorage.getItem('token');
@@ -15,13 +21,7 @@ const toISO = (year, month, day) =>
   `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
 const JournalPage = ({ theme }) => {
-  const isDark = theme === 'dark' || theme === 'design';
-  const bgClass = isDark ? 'bg-[#0c0c0e]' : 'bg-slate-50';
-  const textClass = isDark ? 'text-white' : 'text-slate-900';
-  const cardClass = isDark ? 'bg-[#16161a] border-white/5' : 'bg-white border-slate-200 shadow-sm';
-  const subText = isDark ? 'text-slate-400' : 'text-slate-600';
-  const cellEmpty = isDark ? 'bg-white/5' : 'bg-slate-100';
-  const cellHover = isDark ? 'hover:bg-white/10' : 'hover:bg-slate-200';
+  usePageTitle('Journal · FitCoach');
 
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -44,18 +44,10 @@ const JournalPage = ({ theme }) => {
 
   useEffect(() => { fetchCalendar(); }, [fetchCalendar]);
 
-  // 영양 목표 한 번만 받아서 모달에 내려준다 (모달 매번 fetch 안 하도록).
   useEffect(() => {
     axios.get(`${API_BASE_URL}/user/me`, { headers: authHeaders() })
       .then(res => setNutrition(res.data?.nutrition || null))
       .catch(() => setNutrition(null));
-  }, []);
-
-  // 진입 직후 오늘 날짜 모달을 한 번 펼친다 — 메인 페이지로서 즉시 오늘 상태를 보여주기 위함.
-  // 사용자가 닫으면 그대로 캘린더만 보이고, 페이지 다시 진입 시 또 펼침.
-  useEffect(() => {
-    setSelectedDate(toISO(today.getFullYear(), today.getMonth() + 1, today.getDate()));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const goPrevMonth = () => {
@@ -83,99 +75,225 @@ const JournalPage = ({ theme }) => {
     cells.push({ kind: 'day', key: iso, day: d, iso, info: dayMap[iso] });
   }
 
+  // 월간 요약 통계 — 보고 있는 달 기준.
+  const stats = useMemo(() => {
+    const days = calendar?.days || [];
+    const isCurrentMonth = today.getFullYear() === year && (today.getMonth() + 1) === month;
+
+    const sessions = days.filter(d => d.has_workout).length;
+    const daysSoFar = isCurrentMonth ? today.getDate() : daysInMonth;
+    const rest = Math.max(0, daysSoFar - sessions);
+
+    // current streak: 보는 달이 이번 달일 때만 의미. 오늘부터 역순으로 연속 카운트.
+    let streak = 0;
+    if (isCurrentMonth) {
+      const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
+      const cutoff = todayISO;
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        if (sorted[i].date > cutoff) continue;       // 미래 스킵
+        if (sorted[i].has_workout) streak++;
+        else break;
+      }
+    }
+
+    return { sessions, rest, streak, isCurrentMonth };
+  }, [calendar, year, month, daysInMonth, today, todayISO]);
+
   return (
     <div
-      className={`fixed inset-0 ${bgClass} ${textClass} overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in slide-in-from-right duration-300`}
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in fade-in duration-300"
       style={{ scrollbarWidth: 'none' }}
     >
-      <div className="w-full max-w-3xl mx-auto pt-[80px] pb-[120px] px-6">
-        <header className="mb-8">
-          <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-2">
-            Fitness &amp; Meals Journal
+      <PageSurface maxWidth={1200}>
+      <div className="w-full px-6 md:px-12 py-8">
+
+        {/* 텍스트 영역만 좁게 — 가독성 measure */}
+        <div className="max-w-[640px] pb-6">
+          <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+            — Log · Calendar
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+            Days, <em className="italic text-accent-gold">accumulated.</em>
+          </h1>
+          <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+            날짜를 누르면 그 날의 entry — 운동, 식단, 체성분, coach's note 가 펼쳐집니다.
           </p>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tighter mb-1">My Daily Journal</h1>
-          <p className={`text-sm ${subText}`}>날짜를 누르면 그날의 운동·식단·AI 코멘트가 열립니다.</p>
-        </header>
+        </div>
 
-        <div className={`${cardClass} rounded-[2rem] p-6 border`}>
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={goPrevMonth}
-              className={`p-2 rounded-full ${cellHover}`}
-              aria-label="이전 달"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <h2 className="text-xl font-black tabular-nums">
-              {year}년 {String(month).padStart(2, '0')}월
-            </h2>
-            <button
-              onClick={goNextMonth}
-              className={`p-2 rounded-full ${cellHover}`}
-              aria-label="다음 달"
-            >
-              <ChevronRight size={20} />
-            </button>
+        {/* 월 네비게이션 — 전체 폭 */}
+        <div className="flex items-baseline justify-between border-t border-b border-ink/12 py-3">
+          <button
+            onClick={goPrevMonth}
+            className="font-mono text-[11px] text-taupe hover:text-ink tracking-meta uppercase transition-colors"
+            aria-label="이전 달"
+          >
+            ← Prev
+          </button>
+          <div className="font-display text-2xl text-ink tabular-nums tracking-tight">
+            {year}<span className="text-taupe"> · </span>{String(month).padStart(2, '0')}
           </div>
+          <button
+            onClick={goNextMonth}
+            className="font-mono text-[11px] text-taupe hover:text-ink tracking-meta uppercase transition-colors"
+            aria-label="다음 달"
+          >
+            Next →
+          </button>
+        </div>
 
-          <div className="grid grid-cols-7 gap-1.5 mb-2">
-            {WEEK_LABELS.map((w, i) => (
-              <div
-                key={w}
-                className={`text-center text-[10px] font-black uppercase tracking-widest py-2 ${
-                  i === 0 ? 'text-red-500' : i === 6 ? 'text-blue-500' : subText
-                }`}
-              >
-                {w}
-              </div>
-            ))}
-          </div>
+        {/* 2단 그리드: 캘린더 (1.7fr) + 사이드바 (1fr) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.7fr_1fr]">
 
-          <div className="grid grid-cols-7 gap-1.5">
-            {cells.map(cell => {
-              if (cell.kind === 'pad') {
-                return <div key={cell.key} className="aspect-square" />;
-              }
-              const isToday = cell.iso === todayISO;
-              const info = cell.info;
-              const has = info && (info.has_workout || info.has_meal || info.has_ai || info.has_note);
-              return (
-                <button
-                  key={cell.key}
-                  onClick={() => setSelectedDate(cell.iso)}
-                  className={`aspect-square rounded-xl flex flex-col items-center justify-start p-1.5 transition-colors ${
-                    has ? cellEmpty : ''
-                  } ${cellHover} ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+          {/* 캘린더 컬럼 */}
+          <div className="lg:border-r border-ink/8 lg:pr-6 py-5">
+            {/* Weekday header */}
+            <div className="grid grid-cols-7 mb-2">
+              {WEEK_LABELS.map((w, i) => (
+                <div
+                  key={`${w}-${i}`}
+                  className={`text-center font-mono text-[9px] tracking-meta py-1 ${
+                    i === 0 ? 'text-accent-red' : 'text-taupe'
+                  }`}
                 >
-                  <span className={`text-xs font-black ${isToday ? 'text-blue-500' : ''}`}>{cell.day}</span>
-                  {info && (
-                    <div className="flex gap-0.5 mt-auto pb-0.5">
-                      {info.has_workout && <span className="w-1.5 h-1.5 rounded-full bg-orange-500" title="운동" />}
-                      {info.has_meal && <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="식단" />}
-                      {info.has_ai && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="AI 코멘트" />}
-                      {info.has_note && <span className="w-1.5 h-1.5 rounded-full bg-purple-500" title="한 줄 메모" />}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {loading && (
-            <div className={`mt-6 flex items-center justify-center gap-2 ${subText}`}>
-              <Loader2 className="animate-spin" size={14} />
-              <span className="text-xs">불러오는 중...</span>
+                  {w}
+                </div>
+              ))}
             </div>
-          )}
 
-          <div className={`mt-6 flex flex-wrap gap-x-4 gap-y-2 text-[10px] ${subText}`}>
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-orange-500" />운동</span>
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />식단</span>
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />AI</span>
-            <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-purple-500" />한 줄</span>
+            {/* Days grid */}
+            <div className="grid grid-cols-7 gap-px bg-ink/10 border border-ink/10">
+              {cells.map(cell => {
+                if (cell.kind === 'pad') {
+                  return <div key={cell.key} className="bg-paper min-h-[50px] md:min-h-[80px]" />;
+                }
+                const isToday = cell.iso === todayISO;
+                const isFuture = cell.iso > todayISO;
+                const info = cell.info;
+                const hasWorkout = info?.has_workout;
+
+                return (
+                  <button
+                    key={cell.key}
+                    onClick={() => setSelectedDate(cell.iso)}
+                    className={`relative min-h-[50px] md:min-h-[80px] p-2 text-left transition-colors group ${
+                      isToday
+                        ? 'bg-accent-gold/10 outline outline-1 outline-accent-gold -outline-offset-1'
+                        : 'bg-paper hover:bg-ink/5'
+                    }`}
+                  >
+                    <span
+                      className={`font-mono text-[10px] tabular-nums ${
+                        isToday
+                          ? 'text-accent-gold'
+                          : isFuture
+                            ? 'text-hint'
+                            : 'text-body'
+                      }`}
+                    >
+                      {String(cell.day).padStart(2, '0')}
+                    </span>
+                    {isToday && (
+                      <span className="absolute bottom-1.5 left-2 font-mono text-[7px] tracking-meta text-accent-gold">
+                        TODAY
+                      </span>
+                    )}
+                    {hasWorkout && !isToday && (
+                      <span
+                        className="absolute bottom-1.5 left-2 w-[5px] h-[5px] rounded-full bg-accent-red"
+                        aria-label="Session logged"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex gap-5 mt-3 font-mono text-[9px] text-hint tracking-meta uppercase">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-[5px] h-[5px] rounded-full bg-accent-red" />
+                Session logged
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-[5px] h-[5px] rounded-full bg-hint" />
+                Rest / upcoming
+              </span>
+            </div>
+
+            {loading && (
+              <div className="mt-4 flex items-center gap-2 text-taupe">
+                <Loader2 className="animate-spin" size={12} />
+                <span className="font-mono text-[10px] tracking-meta uppercase">Loading…</span>
+              </div>
+            )}
           </div>
+
+          {/* 월간 요약 사이드바 */}
+          <aside className="border-t lg:border-t-0 border-ink/12 lg:pl-6 py-5">
+            <div className="font-mono text-[10px] text-accent-red tracking-label uppercase mb-4">
+              — This month
+            </div>
+
+            <div className="font-display text-5xl text-ink leading-none tabular-nums">
+              {stats.sessions}
+            </div>
+            <div className="font-display italic text-sm text-taupe mt-1">
+              sessions logged
+            </div>
+
+            {/* 통계 리스트 */}
+            <div className="border-t border-ink/12 mt-5 pt-1">
+              {[
+                { label: 'Personal records', value: '—', accent: 'text-accent-gold' },
+                { label: 'Rest days', value: stats.rest, accent: 'text-ink' },
+                { label: 'Total sets', value: '—', accent: 'text-ink' },
+                { label: 'Volume lifted', value: '—', accent: 'text-ink' },
+              ].map((row, i, arr) => (
+                <div
+                  key={row.label}
+                  className={`flex justify-between items-baseline py-2 ${
+                    i < arr.length - 1 ? 'border-b border-ink/8' : ''
+                  }`}
+                >
+                  <span className="font-mono text-[10px] text-taupe tracking-meta uppercase">
+                    {row.label}
+                  </span>
+                  <span className={`font-display italic text-base tabular-nums ${row.accent}`}>
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Current streak */}
+            <div className="border-t border-ink/12 mt-4 pt-4">
+              <div className="font-mono text-[10px] text-accent-gold tracking-label uppercase mb-2">
+                — Current streak
+              </div>
+              <div className="font-display text-3xl text-ink leading-none tabular-nums">
+                {stats.isCurrentMonth ? stats.streak : '—'}
+                {stats.isCurrentMonth && (
+                  <span className="font-display italic text-sm text-taupe ml-1">days</span>
+                )}
+              </div>
+              <p className="font-display italic text-xs text-hint mt-2 leading-relaxed">
+                {!stats.isCurrentMonth
+                  ? '지난 달 또는 다음 달을 보는 중.'
+                  : stats.streak > 0
+                    ? '연속으로 운동을 이어가는 중.'
+                    : '이번 달엔 아직 연속 기록이 없어요.'}
+              </p>
+            </div>
+          </aside>
+        </div>
+
+        {/* Footer — page-end mark */}
+        <div className="flex justify-between items-center pt-6 mt-10 border-t border-ink/15 font-mono text-[11px] text-hint tracking-meta">
+          <span className="uppercase">— FITCOACH —</span>
+          <span className="uppercase text-taupe">{MONTH_LABELS[month - 1]} {year}</span>
         </div>
       </div>
+      </PageSurface>
 
       {selectedDate && (
         <JournalDayModal

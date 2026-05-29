@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { Camera, Utensils, Trash2, Calculator, Loader2, CheckCircle } from "lucide-react";
 import axios from "axios";
 import { API_BASE_URL } from "../api/config";
+import { useToast } from "../components/ui/Toast";
 
 const FoodCalculator = () => {
+  const toast = useToast();
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [foods, setFoods] = useState([]);
@@ -41,7 +43,7 @@ const FoodCalculator = () => {
 
     } catch (err) {
       console.error("Analysis Error:", err);
-      alert("분석 오류가 발생했습니다. 서버 상태를 확인해주세요.");
+      toast.error("분석 오류가 발생했습니다. 서버 상태를 확인해주세요.");
     } finally {
       setLoading(false);
     }

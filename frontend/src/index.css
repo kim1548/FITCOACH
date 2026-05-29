@@ -1,7 +1,227 @@
 @import "tailwindcss";
+
+/* ----------------------------------------------------------------------------
+   FITCOACH — Editorial Magazine 디자인 토큰
+
+   Tailwind v4 의 @theme 디렉티브로 색·폰트·트래킹 토큰 등록 → 자동으로
+   bg-paper, text-ink, font-display, tracking-label … 같은 유틸리티 클래스 생성.
+   다크 우선 / 라이트는 추후 .light 클래스로 분기.
+---------------------------------------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&display=swap');
+
+@theme {
+  /* --- Page-on-surface 톤 시스템 -------------------------------------
+     surface = 바깥 여백 (가장 어두운 다크 월넛)
+     paper   = 콘텐츠 페이지 (살짝 밝고 따뜻함, 명도 차이 4~5%)
+     사용자가 의식하지 못하는 미묘한 단차로 "콘텐츠가 표면 위에 놓임"
+  --------------------------------------------------------------- */
+  --color-surface: #100c08;            /* 바깥 여백 — 어두운 다크 월넛 */
+  --color-paper: #14110d;              /* 콘텐츠 페이지 — 살짝 밝고 따뜻함 */
+  --color-paper-soft: #1a1614;         /* 약간 밝은 surface (카드/패널) */
+  --color-paper-light: #f4ede0;        /* cream paper (라이트 모드 추후) */
+  --color-page-edge: rgba(240, 232, 216, 0.09);   /* 페이지 상단 엣지 하이라이트 */
+  --color-page-border: rgba(240, 232, 216, 0.05); /* 페이지 나머지 테두리 */
+  --color-ink: #f0e8d8;                /* parchment (메인 텍스트) */
+  --color-ink-dark: #1a1410;           /* near-black ink (라이트 모드 텍스트) */
+  --color-body: #aaa098;               /* 본문 회색 */
+  --color-taupe: #8a8275;              /* 보조 텍스트 */
+  --color-hint: #5c5648;               /* 힌트/메타 */
+
+  /* --- 액센트 ---------------------------------------------------------- */
+  --color-accent-red: #c43c2f;         /* CTA · active · 위험 */
+  --color-accent-red-light: #a3281d;   /* 라이트 모드 */
+  --color-accent-gold: #d9a64a;        /* italic 강조 · PR · highlight */
+  --color-accent-gold-light: #8e6d22;  /* 라이트 모드 */
+
+  /* --- 프로그램별 시그니처 컬러 (포스터 하단 스트라이프용) ----------- */
+  --color-program-stronglifts: #c43c2f;
+  --color-program-madcow: #8b0a0a;
+  --color-program-nsuns: #d9a64a;
+  --color-program-starting: #c0c0c0;
+  --color-program-greyskull: #6b8e5a;
+
+  /* --- 프로그램 포스터 배경 ---------------------------------------- */
+  --color-poster-stronglifts: #2d0e0e;
+  --color-poster-madcow: #1a0e0a;
+  --color-poster-nsuns: #2a1c0a;
+  --color-poster-starting: #1a1f2e;
+  --color-poster-greyskull: #142016;
+
+  /* --- 폰트 패밀리 -------------------------------------------------- */
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --font-poster: "Arial Black", "Helvetica Neue", system-ui, sans-serif;
+
+  /* --- 트래킹 (letter-spacing) 토큰 ---------------------------------- */
+  --tracking-meta: 0.18em;             /* 일반 모노 라벨 */
+  --tracking-label: 0.22em;            /* 섹션 라벨 (— Workout 등) */
+  --tracking-tight: -0.02em;           /* 큰 serif 헤드라인 */
+}
+
 html, body, #root {
   height: 100%;
   /* iOS 주소창/하단바 대응 */
-  height: -webkit-fill-available; 
+  height: -webkit-fill-available;
   overflow: hidden;
+}
+
+/* 폰트 렌더링 — 세리프 가독성 향상 */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ----------------------------------------------------------------------------
+   Landing 모션 — 히어로 ambient + cursor glow + scroll reveal + 섹션 행 hover.
+
+   prefers-reduced-motion: reduce 에서 모든 모션 비활성화 (정지 상태).
+---------------------------------------------------------------------------- */
+
+/* Landing 히어로 — 절제된 ambient 베이스 (cursor halo 가 메인, base 는 조용) */
+.landing-hero {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: #14110d;
+}
+.landing-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 0%,
+    #3a2418 0%,
+    #1e1610 50%,
+    transparent 85%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Flashlight — 상단 중앙에서 내려오는 한 줄기 약한 빛이 마우스 커서를 따라
+   회전(spotlight tracking). 손전등으로 비추는 느낌.
+   .active 가 붙으면 페이드 인. */
+.flashlight {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 340px;
+  height: 130vh;
+  background: linear-gradient(
+    180deg,
+    rgba(220, 170, 110, 0.30) 0%,
+    rgba(195, 145, 95, 0.20) 25%,
+    rgba(150, 95, 55, 0.10) 55%,
+    transparent 85%
+  );
+  transform-origin: 50% 0%;
+  transform: translateX(-50%);
+  filter: blur(50px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.6s ease-out;
+  will-change: transform;
+  z-index: 1;
+}
+.flashlight.active { opacity: 1; }
+
+/* 터치 디바이스 — 커서 없음 → 손전등 자체 숨김 */
+@media (hover: none) {
+  .flashlight { display: none; }
+}
+
+/* Scroll reveal — IntersectionObserver 로 is-visible 토글 */
+.landing-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.6, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+.landing-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 섹션 행 hover — 좌측 옥스블러드 막대 + 화살표 슬라이드 + 옅은 틴트 */
+.landing-row {
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+.landing-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #c43c2f;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+.landing-row:hover {
+  background: rgba(240, 232, 216, 0.03);
+}
+.landing-row:hover::before {
+  transform: scaleY(1);
+}
+.landing-row-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+.landing-row:hover .landing-row-arrow {
+  transform: translateX(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashlight { display: none; }
+  .landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .landing-row,
+  .landing-row::before,
+  .landing-row-arrow {
+    transition: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   .photo-frame — 전역 사진 그레이드
+
+   브랜드 웜 다크 톤과 사진(자세 레퍼런스·프로그램 포스터)의 차가운 회색이
+   충돌하지 않도록, 모든 사진에 동일한 웜 그레이드를 입힌다.
+
+   원칙: 어둡게 만들지 않는다 — 색온도만 따뜻하게.
+   - <img> 자체: saturate 0.55 / contrast 1.04 / brightness 0.97  (거의 그대로)
+   - ::after 오버레이: 웜 브라운(#5a3a28) × mix-blend-mode:color × 30%
+     → 명도는 그대로 유지하고 색상만 따뜻한 갈색·크림 쪽으로 시프트.
+
+   강도 조절: ::after opacity 0.20~0.40 또는 filter saturate 0.40~0.70 으로
+   취향껏 변경. 절대 brightness 0.85 이하로 내리지 말 것.
+---------------------------------------------------------------------------- */
+.photo-frame {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.photo-frame img {
+  display: block;
+  width: 100%;
+  filter: saturate(0.55) contrast(1.04) brightness(0.97);
+}
+.photo-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #5a3a28;
+  mix-blend-mode: color;
+  opacity: 0.30;
+  pointer-events: none;
 }

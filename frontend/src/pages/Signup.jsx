@@ -1,26 +1,49 @@
-import React, { useState } from "react";
-import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
-import { API_BASE_URL } from "../api/config";
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate, Link } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
+import { useToast } from '../components/ui/Toast';
+import FieldError from '../components/ui/FieldError';
+import usePageTitle from '../hooks/usePageTitle';
 
-const GENDER_OPTIONS = ["남", "여"];
-const LIFESTYLE_OPTIONS = ["학생", "사무직", "활동직", "기타"];
-const EXPERIENCE_OPTIONS = ["입문자", "초보", "중급", "고급"];
-const FREQUENCY_OPTIONS = ["주1회", "주2회", "주3회", "주4회 이상"];
-const FITNESS_OPTIONS = ["낮음", "보통", "높음"];
-const GOAL_OPTIONS = ["체중감소", "유지", "벌크업"];
+/**
+ * /signup — Editorial Magazine 톤 (standalone, TopNavbar 없음).
+ */
+
+const GENDER_OPTIONS = ['남', '여'];
+const LIFESTYLE_OPTIONS = ['학생', '사무직', '활동직', '기타'];
+const EXPERIENCE_OPTIONS = ['입문자', '초보', '중급', '고급'];
+const FREQUENCY_OPTIONS = ['주1회', '주2회', '주3회', '주4회 이상'];
+const FITNESS_OPTIONS = ['낮음', '보통', '높음'];
+const GOAL_OPTIONS = ['체중감소', '유지', '벌크업'];
+
+const MONTH_LABELS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const dayOfYear = () => {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+};
 
 const inputCls =
-  "w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all";
-const selectCls = inputCls + " bg-white appearance-none";
-const labelCls = "block text-xs font-black uppercase tracking-widest text-slate-500 mb-2";
+  'w-full px-3 py-2.5 bg-paper border border-ink/15 focus:border-accent-red outline-none font-display text-[15px] text-ink placeholder:text-hint placeholder:italic tabular-nums transition-colors';
+const selectCls = inputCls + ' appearance-none cursor-pointer';
+const labelCls = 'block font-mono text-[10px] text-taupe tracking-meta uppercase mb-1.5';
 
 const Signup = () => {
+  usePageTitle('Register · FitCoach');
+
   const navigate = useNavigate();
+  const toast = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [credError, setCredError] = useState('');
   const [form, setForm] = useState({
-    username: "",
-    password: "",
+    username: '',
+    password: '',
     gender: GENDER_OPTIONS[0],
     age: 25,
     height: 170,
@@ -32,14 +55,18 @@ const Signup = () => {
     goal: GOAL_OPTIONS[0],
   });
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => {
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+    if (credError && (k === 'username' || k === 'password')) setCredError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.username.trim() || !form.password) {
-      alert("아이디와 비밀번호를 입력해주세요.");
+      setCredError('아이디와 비밀번호를 모두 입력해주세요.');
       return;
     }
+    setCredError('');
     setSubmitting(true);
     try {
       await axios.post(`${API_BASE_URL}/auth/signup`, {
@@ -48,138 +75,215 @@ const Signup = () => {
         height: Number(form.height),
         weight: Number(form.weight),
       });
-      alert("회원가입 성공! 로그인해주세요.");
-      navigate("/login");
+      toast.success('회원가입 성공! 로그인해주세요.');
+      navigate('/login');
     } catch (err) {
-      alert("가입 실패: " + (err?.response?.data?.detail || "알 수 없는 오류"));
+      toast.error('가입 실패: ' + (err?.response?.data?.detail || '알 수 없는 오류'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const issueNo = String(dayOfYear()).padStart(3, '0');
+  const now = new Date();
+  const monthLabel = MONTH_LABELS[now.getMonth()];
+
   return (
-    <div className="fixed inset-0 overflow-y-auto bg-slate-50 py-10 px-4">
-      <div className="max-w-md mx-auto p-8 bg-white rounded-3xl shadow-2xl border border-slate-100">
-      <h2 className="text-3xl font-black mb-2 text-center italic text-slate-800">SIGN UP</h2>
-      <p className="text-center text-xs text-slate-500 mb-8 tracking-widest font-bold uppercase">
-        FITCOACH 시작하기
-      </p>
+    <div
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      <div className="w-full max-w-[560px] mx-auto min-h-full flex flex-col px-6 md:px-8 py-10">
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* 1) 계정 정보 */}
-        <div className="space-y-3">
-          <input
-            className={inputCls}
-            placeholder="아이디"
-            value={form.username}
-            onChange={set("username")}
-            autoComplete="username"
-          />
-          <input
-            className={inputCls}
-            type="password"
-            placeholder="비밀번호"
-            value={form.password}
-            onChange={set("password")}
-            autoComplete="new-password"
-          />
-        </div>
+        {/* Masthead */}
+        <header className="flex items-baseline justify-between border-b border-ink/15 pb-4 mb-10">
+          <Link to="/login" className="font-display italic text-lg text-ink tracking-tight">
+            FITCOACH
+          </Link>
+          <span className="font-mono text-[10px] text-taupe tracking-meta uppercase">
+            No. {issueNo} — {monthLabel}
+          </span>
+        </header>
 
-        {/* 2) 신체 정보 */}
-        <div>
-          <span className={labelCls}>신체 정보</span>
-          <div className="grid grid-cols-4 gap-2">
-            <select className={selectCls} value={form.gender} onChange={set("gender")}>
-              {GENDER_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-            <input
-              className={inputCls}
-              type="number"
-              min="10"
-              max="100"
-              placeholder="나이"
-              value={form.age}
-              onChange={set("age")}
-            />
-            <input
-              className={inputCls}
-              type="number"
-              min="100"
-              max="250"
-              placeholder="키"
-              value={form.height}
-              onChange={set("height")}
-            />
-            <input
-              className={inputCls}
-              type="number"
-              min="30"
-              max="250"
-              placeholder="kg"
-              value={form.weight}
-              onChange={set("weight")}
-            />
+        {/* Headline */}
+        <div className="mb-8">
+          <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+            — Register · Begin your journey
           </div>
+          <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+            Begin, <em className="italic text-accent-gold">on record.</em>
+          </h1>
+          <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+            한 끼, 한 세트, 한 측정 — 작은 기록이 모이면 한 사람의 변화가 보입니다.
+          </p>
         </div>
 
-        {/* 3) 생활 패턴 */}
-        <div>
-          <span className={labelCls}>라이프스타일</span>
-          <select className={selectCls} value={form.lifestyle} onChange={set("lifestyle")}>
-            {LIFESTYLE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-7">
 
-        {/* 4) 운동 정보 */}
-        <div className="space-y-3">
-          <div>
-            <span className={labelCls}>운동 경력</span>
-            <select className={selectCls} value={form.workout_experience} onChange={set("workout_experience")}>
-              {EXPERIENCE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <span className={labelCls}>운동 빈도</span>
-              <select className={selectCls} value={form.workout_frequency} onChange={set("workout_frequency")}>
-                {FREQUENCY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+          {/* 1) Credentials */}
+          <section>
+            <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+              — Account
+            </div>
+            <div className="space-y-3 border-t border-ink/12 pt-4">
+              <div>
+                <label className={labelCls}>Username</label>
+                <input
+                  className={inputCls}
+                  placeholder="아이디"
+                  value={form.username}
+                  onChange={set('username')}
+                  autoComplete="username"
+                  aria-invalid={!!credError}
+                  aria-describedby={credError ? 'cred-error' : undefined}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Password</label>
+                <input
+                  className={inputCls}
+                  type="password"
+                  placeholder="비밀번호"
+                  value={form.password}
+                  onChange={set('password')}
+                  autoComplete="new-password"
+                  aria-invalid={!!credError}
+                  aria-describedby={credError ? 'cred-error' : undefined}
+                />
+                <FieldError id="cred-error">{credError}</FieldError>
+              </div>
+            </div>
+          </section>
+
+          {/* 2) Body */}
+          <section>
+            <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+              — Body
+            </div>
+            <div className="grid grid-cols-4 gap-3 border-t border-ink/12 pt-4">
+              <div>
+                <label className={labelCls}>Gender</label>
+                <select className={selectCls} value={form.gender} onChange={set('gender')}>
+                  {GENDER_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Age</label>
+                <input
+                  className={inputCls + ' [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'}
+                  style={{ MozAppearance: 'textfield' }}
+                  type="number" min="10" max="100"
+                  value={form.age} onChange={set('age')}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Height</label>
+                <input
+                  className={inputCls + ' [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'}
+                  style={{ MozAppearance: 'textfield' }}
+                  type="number" min="100" max="250"
+                  value={form.height} onChange={set('height')}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Weight</label>
+                <input
+                  className={inputCls + ' [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'}
+                  style={{ MozAppearance: 'textfield' }}
+                  type="number" min="30" max="250"
+                  value={form.weight} onChange={set('weight')}
+                />
+              </div>
+            </div>
+            <p className="font-mono text-[9px] text-hint tracking-meta uppercase mt-2">
+              · age · cm · kg
+            </p>
+          </section>
+
+          {/* 3) Lifestyle */}
+          <section>
+            <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+              — Lifestyle
+            </div>
+            <div className="border-t border-ink/12 pt-4">
+              <label className={labelCls}>Daily routine</label>
+              <select className={selectCls} value={form.lifestyle} onChange={set('lifestyle')}>
+                {LIFESTYLE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
-            <div>
-              <span className={labelCls}>체력 수준</span>
-              <select className={selectCls} value={form.fitness_level} onChange={set("fitness_level")}>
-                {FITNESS_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+          </section>
+
+          {/* 4) Training */}
+          <section>
+            <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+              — Training
+            </div>
+            <div className="space-y-3 border-t border-ink/12 pt-4">
+              <div>
+                <label className={labelCls}>Experience · 운동 경력</label>
+                <select className={selectCls} value={form.workout_experience} onChange={set('workout_experience')}>
+                  {EXPERIENCE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Frequency · 빈도</label>
+                  <select className={selectCls} value={form.workout_frequency} onChange={set('workout_frequency')}>
+                    {FREQUENCY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Fitness · 체력</label>
+                  <select className={selectCls} value={form.fitness_level} onChange={set('fitness_level')}>
+                    {FITNESS_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 5) Goal */}
+          <section>
+            <div className="font-mono text-[11px] text-accent-gold tracking-label uppercase mb-3">
+              — Goal
+            </div>
+            <div className="border-t border-ink/12 pt-4">
+              <label className={labelCls}>이번 달의 목표</label>
+              <select className={selectCls} value={form.goal} onChange={set('goal')}>
+                {GOAL_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
               </select>
             </div>
-          </div>
+          </section>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full py-3.5 mt-2 font-mono text-[11px] tracking-label uppercase bg-accent-red text-ink hover:bg-accent-red/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            {submitting && <Loader2 size={12} className="animate-spin" />}
+            {submitting ? 'Creating account…' : '→ Create account'}
+          </button>
+        </form>
+
+        {/* Bottom — login */}
+        <div className="border-t border-ink/15 mt-10 pt-6 text-center">
+          <p className="font-display italic text-sm text-taupe mb-3">
+            이미 계정이 있으신가요?
+          </p>
+          <Link
+            to="/login"
+            className="inline-block font-mono text-[11px] tracking-label uppercase px-5 py-3 border border-ink/20 text-taupe hover:text-ink hover:border-ink/40 transition-colors"
+          >
+            → Sign in instead
+          </Link>
         </div>
 
-        {/* 5) 목표 */}
-        <div>
-          <span className={labelCls}>목표</span>
-          <select className={selectCls} value={form.goal} onChange={set("goal")}>
-            {GOAL_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
+        {/* Footer */}
+        <div className="mt-auto pt-10 border-t border-ink/15 mt-10 flex justify-between items-center font-mono text-[10px] text-hint tracking-meta uppercase">
+          <span>— FITCOACH —</span>
+          <span className="text-taupe">Register</span>
         </div>
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-green-500 text-white p-4 rounded-2xl font-bold text-lg hover:bg-green-600 hover:shadow-lg hover:shadow-green-200 transition-all active:scale-[0.98] disabled:opacity-50"
-        >
-          {submitting ? "가입 중..." : "가입하기"}
-        </button>
-      </form>
-
-      <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-        <p className="text-slate-500 text-sm mb-4">이미 계정이 있으신가요?</p>
-        <Link
-          to="/login"
-          className="inline-block w-full p-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-200 transition-all"
-        >
-          로그인 하러가기
-        </Link>
-      </div>
       </div>
     </div>
   );

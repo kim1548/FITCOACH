@@ -1,69 +1,163 @@
-import React, { useState } from "react";
-import axios from "axios";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate, Link } from "react-router-dom"; // 🟢 Link 추가
-import { API_BASE_URL } from "../api/config";
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
+import { useToast } from '../components/ui/Toast';
+import FieldError from '../components/ui/FieldError';
+import usePageTitle from '../hooks/usePageTitle';
+
+/**
+ * /login — Editorial Magazine 톤 (standalone, TopNavbar 없음).
+ */
+
+const MONTH_LABELS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+const dayOfYear = () => {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+};
 
 const Login = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  usePageTitle('Sign in · FitCoach');
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [credError, setCredError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
-  const handleLogin = async (e) => {
+  const issueNo = String(dayOfYear()).padStart(3, '0');
+  const now = new Date();
+  const monthLabel = MONTH_LABELS[now.getMonth()];
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!username.trim() || !password) {
+      setCredError('아이디와 비밀번호를 모두 입력해주세요.');
+      return;
+    }
+    setCredError('');
+    setSubmitting(true);
     try {
       const params = new URLSearchParams();
       params.append('username', username);
       params.append('password', password);
-
       const res = await axios.post(`${API_BASE_URL}/auth/login`, params);
-      alert("로그인 성공!"); 
+      toast.success('로그인 성공!');
       login(res.data.access_token, res.data.username);
-      navigate("/"); 
+      navigate('/');
     } catch (err) {
-      console.error(err);
-      alert("로그인 실패! 아이디나 비밀번호를 확인하세요.");
+      toast.error('로그인 실패! 아이디나 비밀번호를 확인하세요.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 overflow-y-auto bg-slate-50 py-10 px-4">
-      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-3xl shadow-2xl border border-slate-100">
-      <h2 className="text-3xl font-black mb-8 text-center italic text-slate-800">LOGIN</h2>
-      
-      <form onSubmit={handleLogin} className="space-y-4">
-        <input 
-          className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all" 
-          placeholder="아이디" 
-          value={username} 
-          onChange={e => setUsername(e.target.value)} 
-        />
-        <input 
-          className="w-full p-4 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-all" 
-          type="password" 
-          placeholder="비밀번호" 
-          value={password} 
-          onChange={e => setPassword(e.target.value)} 
-        />
-        <button 
-          type="submit" 
-          className="w-full bg-green-500 text-white p-4 rounded-2xl font-bold text-lg hover:bg-green-600 hover:shadow-lg hover:shadow-green-200 transition-all active:scale-[0.98]"
-        >
-          로그인
-        </button>
-      </form>
+  const onChange = (setter) => (e) => {
+    setter(e.target.value);
+    if (credError) setCredError('');
+  };
 
-      {/* 🟢 회원가입 유도 구역 */}
-      <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-        <p className="text-slate-500 text-sm mb-4">계정이 없으신가요?</p>
-        <Link 
-          to="/signup" 
-          className="inline-block w-full p-4 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-200 transition-all"
-        >
-          회원가입 하러가기
-        </Link>
-      </div>
+  return (
+    <div
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      <div className="w-full max-w-[480px] mx-auto min-h-full flex flex-col px-6 md:px-8 py-10">
+
+        {/* Masthead */}
+        <header className="flex items-baseline justify-between border-b border-ink/15 pb-4 mb-10">
+          <Link to="/login" className="font-display italic text-lg text-ink tracking-tight">
+            FITCOACH
+          </Link>
+          <span className="font-mono text-[10px] text-taupe tracking-meta uppercase">
+            No. {issueNo} — {monthLabel}
+          </span>
+        </header>
+
+        {/* Headline */}
+        <div className="mb-8">
+          <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+            — Sign in · Welcome back
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+            Welcome <em className="italic text-accent-gold">back.</em>
+          </h1>
+          <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+            오늘의 기록을 이어가려면 먼저 자리에 앉아주세요.
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5 mb-8">
+          <div>
+            <label className="block font-mono text-[10px] text-taupe tracking-meta uppercase mb-1.5">
+              Username
+            </label>
+            <input
+              value={username}
+              onChange={onChange(setUsername)}
+              placeholder="아이디"
+              autoComplete="username"
+              aria-invalid={!!credError}
+              aria-describedby={credError ? 'login-err' : undefined}
+              className="w-full px-3 py-2.5 bg-paper border border-ink/15 focus:border-accent-red outline-none font-display text-[15px] text-ink placeholder:text-hint placeholder:italic transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-[10px] text-taupe tracking-meta uppercase mb-1.5">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={onChange(setPassword)}
+              placeholder="비밀번호"
+              autoComplete="current-password"
+              aria-invalid={!!credError}
+              aria-describedby={credError ? 'login-err' : undefined}
+              className="w-full px-3 py-2.5 bg-paper border border-ink/15 focus:border-accent-red outline-none font-display text-[15px] text-ink placeholder:text-hint placeholder:italic transition-colors"
+            />
+            <FieldError id="login-err">{credError}</FieldError>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full py-3.5 mt-2 font-mono text-[11px] tracking-label uppercase bg-accent-red text-ink hover:bg-accent-red/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            {submitting && <Loader2 size={12} className="animate-spin" />}
+            {submitting ? 'Signing in…' : '→ Sign in'}
+          </button>
+        </form>
+
+        {/* Bottom — register */}
+        <div className="border-t border-ink/15 pt-6 text-center">
+          <p className="font-display italic text-sm text-taupe mb-3">
+            아직 계정이 없으신가요?
+          </p>
+          <Link
+            to="/signup"
+            className="inline-block font-mono text-[11px] tracking-label uppercase px-5 py-3 border border-ink/20 text-taupe hover:text-ink hover:border-ink/40 transition-colors"
+          >
+            → Register an account
+          </Link>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-auto pt-10 border-t border-ink/15 mt-10 flex justify-between items-center font-mono text-[10px] text-hint tracking-meta uppercase">
+          <span>— FITCOACH —</span>
+          <span className="text-taupe">Sign in</span>
+        </div>
       </div>
     </div>
   );

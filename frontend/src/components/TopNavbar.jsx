@@ -1,128 +1,136 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogIn, LogOut, UserPlus, Settings as SettingsIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import AuthPromptModal from "./ui/AuthPromptModal";
 
-// 💡 URL 파라미터로 들어오는 값을 어떻게 보여줄지 정의
-const ROUTE_CONFIG = {
-  // "exercise": { name: "운동 분석", link: "/Exercise" },
-  // "diet": { name: "식단 기록", link: "/diet" },
-  // "journal": { name: "저널", link: "/journal" },
-  
-  // 운동 ID 매핑 (URL에 포함된 영문을 한글로 변환)
-  // "SQUAT": { name: "스쿼트", link: null },
-  // "BENCH": { name: "벤치프레스", link: null },
-  // "DEAD": { name: "데드리프트", link: null },
-  
-  // 마지막 단계 표시
-  // "ANALYSIS": { name: "실시간 분석", link: null }
+/**
+ * Editorial Magazine 톤의 상단 마스트헤드.
+ *
+ * Line 1: FITCOACH 워드마크 (italic serif) + Issue No (오늘 day-of-year) + 인증 액션
+ * Line 2: 섹션 탭 (Log · Program · Form · Diet · Body · Personals)
+ *
+ * 디자인 토큰만 사용 — bg-paper, text-ink, text-taupe, accent-red, accent-gold,
+ * font-display, font-mono, tracking-meta, tracking-label.
+ */
+
+// 라벨은 기존 하단 Navbar 의 그대로 — 목업은 스타일(매거진 톤)만 참고.
+const TABS = [
+  { label: "Community",  to: "/community", match: (p) => p.startsWith("/community") },
+  { label: "PROGRAM",    to: "/program",   match: (p) => p.startsWith("/program") },
+  { label: "Form Check", to: "/formcheck", match: (p) => p.startsWith("/formcheck") },
+  { label: "MEALS",      to: "/meals",     match: (p) => p.startsWith("/meals") },
+  { label: "BODY",       to: "/body",      match: (p) => p.startsWith("/body") },
+  { label: "Journal",    to: "/journal",   match: (p) => p.startsWith("/journal") },
+];
+
+const MONTH_LABELS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const dayOfYear = () => {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
 };
 
-const TopNavbar = ({ s, onOpenSettings }) => {
+const TopNavbar = ({ onOpenSettings }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
 
-  // 현재 전체 경로 배열화 (예: ["exercise", "SQUAT", "ANALYSIS"])
-  const pathnames = location.pathname.split("/").filter((x) => x);
+  const issueNo = String(dayOfYear()).padStart(3, "0");
+  const now = new Date();
+  const monthLabel = MONTH_LABELS[now.getMonth()];
+  const yearLabel = now.getFullYear();
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  // FITCOACH 워드마크 — 로그인 시 /journal, 미로그인 시 유도 모달.
+  const handleBrandClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      setAuthPromptOpen(true);
+    }
+  };
+
   return (
-    <nav className={`w-full h-14 ${s.header} border-b ${s.border} flex items-center justify-between px-6 backdrop-blur-md z-[100]`}>
-      
-      {/* 왼쪽: 탐색기형 경로 (Breadcrumb) */}
-      <div className="flex items-center gap-2 text-sm font-bold tracking-tighter overflow-x-auto whitespace-nowrap scrollbar-hide max-w-[80%]">
-        <Link to="/journal" className="hover:text-blue-500 transition-colors uppercase flex-shrink-0 text-blue-500">
+    <nav className="w-full bg-paper border-b border-ink/15 z-[100] flex-shrink-0">
+      {/* Line 1 — Masthead: brand + issue + auth actions */}
+      <div className="flex items-baseline justify-between px-6 py-3 border-b border-ink/12">
+        <Link
+          to="/journal"
+          onClick={handleBrandClick}
+          className="font-display italic text-lg text-ink hover:text-accent-gold transition-colors tracking-tight"
+        >
           FITCOACH
         </Link>
-        
-        {pathnames.map((name, index) => {
-          // 💡 핵심: 주소창의 암호(%EC...)를 다시 한글로 해독합니다.
-          const decodedName = decodeURIComponent(name);
-          // 1. 매핑된 한글 이름 찾기 (없으면 대문자 변환)
-          const config = ROUTE_CONFIG[decodedName];
-          const displayName = config ? config.name : decodedName.toUpperCase();
-          
-          // 2. '운동 분석'인 경우에만 선택 페이지 링크 부여
-          let targetLink = null;
-          if (name === "exercise") {
-            targetLink = "/Exercise";
-          } else if (config && config.link) {
-            targetLink = config.link;
-          }
+        <div className="flex items-baseline gap-5 font-mono text-[11px] tracking-meta uppercase">
+          <span className="text-taupe hidden sm:inline">
+            No. {issueNo} — {monthLabel} {yearLabel}
+          </span>
+          {user ? (
+            <>
+              <span className="text-hint hidden md:inline normal-case tracking-normal">
+                {user.username}
+              </span>
+              <button
+                onClick={onOpenSettings}
+                className="text-taupe hover:text-ink transition-colors"
+                aria-label="설정"
+              >
+                Set
+              </button>
+              <button
+                onClick={handleLogout}
+                className="text-taupe hover:text-accent-red transition-colors"
+                aria-label="로그아웃"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="text-taupe hover:text-ink transition-colors">
+                → Sign in
+              </Link>
+              <Link to="/signup" className="text-accent-red hover:text-ink transition-colors">
+                → Register
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
 
-          const isLast = index === pathnames.length - 1;
-
+      {/* Line 2 — Section tabs */}
+      <div className="flex gap-6 px-6 py-2 font-mono text-[11px] tracking-meta uppercase overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        {TABS.map((tab) => {
+          const active = tab.match(location.pathname);
           return (
-            <React.Fragment key={index}>
-              <span className="text-slate-600 opacity-50">/</span>
-              {isLast ? (
-                // 마지막 경로는 파란색 강조
-                <span className="text-blue-500 font-black uppercase">{displayName}</span>
-              ) : (
-                // 중간 경로
-                <Link 
-                  to={targetLink || "#"} 
-                  className={`transition-colors font-medium uppercase ${targetLink ? 'hover:text-blue-500 text-slate-400' : 'text-slate-500 cursor-default'}`}
-                  onClick={(e) => !targetLink && e.preventDefault()}
-                >
-                  {displayName}
-                </Link>
-              )}
-            </React.Fragment>
+            <Link
+              key={tab.label}
+              to={tab.to}
+              className={`flex-shrink-0 transition-colors ${
+                active
+                  ? "text-ink border-b border-accent-red pb-1"
+                  : "text-taupe hover:text-ink pb-1"
+              }`}
+            >
+              {tab.label}
+            </Link>
           );
         })}
       </div>
 
-      {/* 오른쪽: 로그인 상태에 따라 (로그인 + 회원가입) 또는 (사용자명 + 로그아웃) */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {user ? (
-          <>
-            <span className="hidden sm:inline text-[11px] font-bold text-slate-500">
-              {user.username}님
-            </span>
-            <button
-              onClick={onOpenSettings}
-              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all"
-              aria-label="설정"
-            >
-              <SettingsIcon size={12} />
-              <span className="hidden sm:inline">Settings</span>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-red-500/20 hover:text-red-500 border border-white/10 rounded-lg transition-all"
-              aria-label="로그아웃"
-            >
-              <LogOut size={12} />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
-          </>
-        ) : (
-          <>
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-white/5 hover:bg-blue-500/20 hover:text-blue-400 border border-white/10 rounded-lg transition-all"
-              aria-label="로그인"
-            >
-              <LogIn size={12} />
-              <span className="hidden sm:inline">Login</span>
-            </Link>
-            <Link
-              to="/signup"
-              className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-3 py-1.5 bg-blue-600/15 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg transition-all"
-              aria-label="회원가입"
-            >
-              <UserPlus size={12} />
-              <span className="hidden sm:inline">Sign Up</span>
-            </Link>
-          </>
-        )}
-      </div>
+      {/* 미로그인 사용자가 FITCOACH 워드마크를 누르면 노출되는 유도 모달 */}
+      <AuthPromptModal
+        open={authPromptOpen}
+        onClose={() => setAuthPromptOpen(false)}
+      />
     </nav>
   );
 };

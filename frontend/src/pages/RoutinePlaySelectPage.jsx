@@ -1,132 +1,264 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, ChevronRight, Info, Moon, Sun, Palette } from 'lucide-react';
 import { CAMERA_GUIDE, EXERCISE_CATEGORIES } from '../constants/exercise';
+import PageSurface from '../components/PageSurface';
+import usePageTitle from '../hooks/usePageTitle';
 
-const ExerciseSelectPage = ({ theme, setTheme }) => {
-  const navigate = useNavigate();
+/**
+ * /formcheck — AI 자세 분석 라이브러리 (Editorial Magazine 톤).
+ *
+ * 패턴: Program library 와 동일.
+ * 상단 부위 chips → Featured (현재 선택된 운동, 큰 카드) → Other exercises 컴팩트 리스트.
+ */
 
-  const handleSelect = (exId) => {
-    navigate(`/formcheck/${encodeURIComponent(exId)}`);
-  };
-  
-  const [selectedCat, setSelectedCat] = useState("가슴");
-  const [selectedEx, setSelectedEx] = useState(EXERCISE_CATEGORIES["가슴"][0]);
+const BODY_PARTS = Object.keys(EXERCISE_CATEGORIES);
 
-  // 테마에 따른 배경색 설정 (DietPage와 동일한 폭 및 색감)
-  const isDark = theme === 'dark' || theme === 'design';
-  const bgClass = isDark ? "bg-[#0c0c0e]" : "bg-slate-50";
-  const cardClass = isDark ? "bg-[#16161a] border-white/5" : "bg-white border-slate-200 shadow-sm";
-  const textClass = isDark ? "text-white" : "text-slate-900";
+// CAMERA_GUIDE 첫 단어로 촬영 각도 추출 ("정면에서…" / "측면에서…").
+const angleOf = (name) => {
+  const g = CAMERA_GUIDE[name];
+  if (!g) return null;
+  if (g.startsWith('정면')) return 'Front view';
+  if (g.startsWith('측면')) return 'Side view';
+  return null;
+};
 
-  const getGuideImage = (exerciseName) => {
-    try {
-      return new URL(`../assets/guide_images/${exerciseName}.png`, import.meta.url).href;
-    } catch (err) {
-      return "/assets/default_guide.png"; // 이미지 없을 때 기본값(이미지 없음ㅎㅎ)
-    }
-  };
+const getGuideImage = (name) => {
+  try {
+    return new URL(`../assets/guide_images/${name}.png`, import.meta.url).href;
+  } catch {
+    return null;
+  }
+};
+
+const ExerciseCover = ({ name, size = 'sm' }) => {
+  const [broken, setBroken] = useState(false);
+  const src = getGuideImage(name);
+  const dims = size === 'featured'
+    ? 'w-full md:w-[260px] aspect-[4/5] md:aspect-[3/4]'
+    : 'w-[76px] h-[106px]';
+  const fs = size === 'featured' ? '22px' : '11px';
 
   return (
-    <div className={`fixed inset-0 ${bgClass} ${textClass} overflow-y-scroll`} style={{ scrollbarGutter: 'stable' }}>
-      <div className="w-full max-w-6xl mx-auto min-h-screen flex flex-col">
-        
-        {/* 상단 헤더: DietPage와 완벽 일치 */}
-        <header className={`w-full flex justify-between items-center p-6 border-b ${isDark ? 'border-white/5 bg-[#0c0c0e]/80' : 'border-slate-200 bg-white/80'} backdrop-blur-md z-[100] sticky top-0`}>
-          <div className="flex gap-2">
-            <button onClick={() => setTheme('dark')} className="p-1"><Moon size={16} className={theme === 'dark' ? 'text-blue-500' : 'text-slate-400'} /></button>
-            <button onClick={() => setTheme('light')} className="p-1"><Sun size={16} className={theme === 'light' ? 'text-blue-500' : 'text-slate-400'} /></button>
-            <button onClick={() => setTheme('design')} className="p-1"><Palette size={16} className={theme === 'design' ? 'text-blue-500' : 'text-slate-400'} /></button>
-          </div>
-          <h2 className="text-[10px] font-black text-blue-500 italic uppercase tracking-[0.3em]">AI Exercise Selection</h2>
-          <div className="w-6"></div>
-        </header>
-
-        <main className="flex-1 p-6 lg:p-10 space-y-10">
-          
-          {/* --- [부위 선택 섹션] --- */}
-          <section className={`${cardClass} rounded-[3rem] p-10 relative overflow-hidden`}>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-6">Select Target Body Part</p>
-            <div className="flex flex-wrap gap-3">
-              {Object.keys(EXERCISE_CATEGORIES).map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => { setSelectedCat(cat); setSelectedEx(EXERCISE_CATEGORIES[cat][0]); }}
-                  className={`px-8 py-3 rounded-full font-black text-sm transition-all ${selectedCat === cat ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-white/5 text-slate-500 hover:bg-white/10'}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* --- [세부 운동 선택 & 가이드 2컬럼] --- */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* 좌측: 세부 운동 리스트 */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.3em]">Exercise List</span>
-                <div className="h-[1px] flex-1 bg-white/5"></div>
-              </div>
-              <div className="grid gap-4">
-                {EXERCISE_CATEGORIES[selectedCat].map(ex => (
-                  <button
-                    key={ex}
-                    onClick={() => setSelectedEx(ex)}
-                    className={`w-full p-6 rounded-[2rem] border transition-all flex justify-between items-center ${selectedEx === ex ? 'border-blue-500 bg-blue-500/5' : 'border-white/5 bg-[#16161a] hover:border-white/20'}`}
-                  >
-                    <span className={`text-lg font-black ${selectedEx === ex ? 'text-blue-500' : 'text-white'}`}>{ex}</span>
-                    <ChevronRight size={20} className={selectedEx === ex ? 'text-blue-500' : 'text-slate-700'} />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 우측: 상세 가이드 & 사진 */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 mb-6">
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.3em]">Posture Guide</span>
-                <div className="h-[1px] flex-1 bg-white/5"></div>
-              </div>
-              <div className={`${cardClass} rounded-[2.5rem] p-8 space-y-6`}>
-                {/* 가이드 이미지 영역 */}
-                <div className="aspect-video bg-black rounded-[1.5rem] overflow-hidden border border-white/10 relative group">
-                  <img src={getGuideImage(selectedEx)} alt={selectedEx} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <p className="text-white font-black text-xl mb-1">{selectedEx} 권장 자세</p>
-                    <p className="text-blue-400 text-xs font-bold uppercase tracking-widest">Recommended Setup</p>
-                  </div>
-                </div>
-
-                {/* 가이드 텍스트 (Streamlit 상세 로직 보존) */}
-                <div className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/5">
-                  <Info className="text-blue-500 shrink-0" size={20} />
-                  <p className="text-sm leading-relaxed text-slate-400 font-medium">
-                    {CAMERA_GUIDE[selectedEx] || "상세 가이드를 준비 중입니다."}
-                  </p>
-                </div>
-
-                {/* 분석 시작 버튼 */}
-                <button
-                  onClick={() => navigate(`/formcheck/${encodeURIComponent(selectedEx)}`)}
-                  className="w-full py-6 rounded-2xl bg-blue-600 text-white hover:bg-blue-500 shadow-xl shadow-blue-600/20 flex items-center justify-center gap-3 font-black uppercase text-sm tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <Play size={20} fill="currentColor" />
-                  Start AI Analysis
-                </button>
-              </div>
-            </div>
-          </section>
-        </main>
-
-        <footer className="py-20 text-center">
-          <p className="text-[10px] font-black text-slate-800 uppercase tracking-[0.5em]">Powered by 2800+ Lines of Logic</p>
-        </footer>
-      </div>
+    <div className={`${dims} photo-frame flex-shrink-0 border border-ink/15 bg-paper-soft`}>
+      {src && !broken ? (
+        <img
+          src={src}
+          alt={name}
+          className="w-full h-full object-contain"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center">
+          <span
+            className="font-poster text-ink uppercase tracking-tight leading-[0.92]"
+            style={{ fontSize: fs }}
+          >
+            {name}
+          </span>
+        </div>
+      )}
     </div>
   );
 };
 
-export default ExerciseSelectPage;
+const RoutinePlaySelectPage = () => {
+  usePageTitle('Form Check · FitCoach');
+
+  const navigate = useNavigate();
+  const [selectedCat, setSelectedCat] = useState(BODY_PARTS[0]);
+  const [selectedEx, setSelectedEx] = useState(EXERCISE_CATEGORIES[BODY_PARTS[0]][0]);
+
+  const exercisesInCat = EXERCISE_CATEGORIES[selectedCat];
+  const featured = selectedEx;
+  const others = useMemo(
+    () => exercisesInCat.filter((ex) => ex !== featured),
+    [exercisesInCat, featured],
+  );
+
+  const totalCount = useMemo(
+    () => Object.values(EXERCISE_CATEGORIES).reduce((acc, arr) => acc + arr.length, 0),
+    [],
+  );
+
+  const featuredIdx = exercisesInCat.indexOf(featured);
+  const featuredVol = String(featuredIdx + 1).padStart(2, '0');
+  const featuredAngle = angleOf(featured);
+
+  const handleCatChange = (cat) => {
+    setSelectedCat(cat);
+    setSelectedEx(EXERCISE_CATEGORIES[cat][0]);
+  };
+
+  const handleStart = () => {
+    navigate(`/formcheck/${encodeURIComponent(featured)}`);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in fade-in duration-300"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      <PageSurface maxWidth={1200}>
+        <div className="w-full px-6 md:px-12 py-8">
+
+          {/* Headline */}
+          <div className="max-w-[640px] pb-6">
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                — Form Check · Library
+              </div>
+              <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                {totalCount.toString().padStart(2, '0')} exercises
+              </div>
+            </div>
+            <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+              Choose your <em className="italic text-accent-gold">form,<br />perfected.</em>
+            </h1>
+            <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+              영상 한 편을 업로드하면 AI 가 자세를 분석해 안정성·가동범위·코어·자세 다섯 축으로 진단합니다.
+            </p>
+          </div>
+
+          {/* Body part filter */}
+          <div className="flex items-center justify-between border-t border-b border-ink/12 py-3 mb-0">
+            <span className="font-mono text-[10px] text-hint tracking-meta uppercase">
+              Target
+            </span>
+            <div className="flex flex-wrap gap-x-5 gap-y-1.5 justify-end">
+              {BODY_PARTS.map((cat) => {
+                const active = cat === selectedCat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => handleCatChange(cat)}
+                    className={`font-mono text-[11px] tracking-meta uppercase transition-colors ${
+                      active ? 'text-accent-red' : 'text-taupe hover:text-ink'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Featured */}
+          <section className="pt-8 pb-2">
+            <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-4">
+              — Featured · {selectedCat}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6 md:gap-8 p-6 md:p-7 border border-accent-gold/30 bg-accent-gold/[0.05]">
+              <ExerciseCover name={featured} size="featured" />
+
+              <div className="min-w-0 flex flex-col">
+                <div className="flex items-baseline gap-3 flex-wrap mb-1">
+                  <span className="font-display italic text-3xl leading-none text-hint">
+                    {featuredVol}
+                  </span>
+                  <span className="font-display text-3xl md:text-4xl text-ink leading-tight">
+                    {featured}
+                  </span>
+                </div>
+                <div className="font-mono text-[10px] text-taupe tracking-meta uppercase mb-3">
+                  {selectedCat}
+                  {featuredAngle && <> · {featuredAngle}</>}
+                </div>
+
+                {featuredAngle && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    <span className="font-mono text-[9px] text-taupe tracking-meta uppercase border border-ink/15 px-2 py-1">
+                      {featuredAngle}
+                    </span>
+                    <span className="font-mono text-[9px] text-taupe tracking-meta uppercase border border-ink/15 px-2 py-1">
+                      MediaPipe Pose
+                    </span>
+                    <span className="font-mono text-[9px] text-taupe tracking-meta uppercase border border-ink/15 px-2 py-1">
+                      5-axis report
+                    </span>
+                  </div>
+                )}
+
+                <div className="font-mono text-[10px] text-accent-gold tracking-label uppercase mb-2">
+                  — Recommended setup
+                </div>
+                <blockquote className="font-display italic text-[15px] text-body leading-relaxed border-l-2 border-accent-red pl-3 mb-6 m-0">
+                  "{CAMERA_GUIDE[featured] || '상세 가이드를 준비 중입니다.'}"
+                </blockquote>
+
+                <div className="mt-auto">
+                  <button
+                    onClick={handleStart}
+                    className="font-mono text-[11px] tracking-label uppercase px-5 py-3 border border-accent-red text-accent-red hover:bg-accent-red hover:text-ink transition-colors"
+                  >
+                    → Start AI analysis
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Other exercises in category */}
+          {others.length > 0 && (
+            <section className="pt-8">
+              <div className="flex items-baseline justify-between mb-3">
+                <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                  — Other in {selectedCat}
+                </div>
+                <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                  {others.length.toString().padStart(2, '0')} more
+                </div>
+              </div>
+
+              <div className="border-t border-ink/15">
+                {others.map((name) => {
+                  const idx = exercisesInCat.indexOf(name);
+                  const vol = String(idx + 1).padStart(2, '0');
+                  const angle = angleOf(name);
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setSelectedEx(name)}
+                      className="grid grid-cols-[76px_1fr_auto] gap-5 py-4 border-b border-ink/8 w-full text-left hover:bg-ink/[0.03] transition-colors items-center"
+                    >
+                      <ExerciseCover name={name} size="compact" />
+
+                      <div className="min-w-0">
+                        <div className="flex items-baseline gap-2.5 flex-wrap mb-1">
+                          <span className="font-display italic text-lg leading-none text-hint">
+                            {vol}
+                          </span>
+                          <span className="font-display text-lg text-ink leading-tight">
+                            {name}
+                          </span>
+                          {angle && (
+                            <span className="font-mono text-[10px] text-taupe tracking-meta uppercase">
+                              · {angle}
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-display italic text-[13px] text-body leading-snug line-clamp-1">
+                          {CAMERA_GUIDE[name] || '상세 가이드를 준비 중입니다.'}
+                        </p>
+                      </div>
+
+                      <span className="self-center flex-shrink-0 font-mono text-lg text-taupe">›</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Footer */}
+          <div className="flex justify-between items-center pt-6 mt-10 border-t border-ink/15 font-mono text-[11px] text-hint tracking-meta">
+            <span className="uppercase">— FITCOACH —</span>
+            <span className="uppercase text-taupe">Form Check · {totalCount} exercises</span>
+          </div>
+        </div>
+      </PageSurface>
+    </div>
+  );
+};
+
+export default RoutinePlaySelectPage;

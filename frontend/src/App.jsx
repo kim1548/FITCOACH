@@ -2,68 +2,56 @@
 import React, { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import TopNavbar from "./components/TopNavbar";
-import Navbar from "./components/Navbar";
 import SettingsDrawer from "./components/SettingsDrawer";
 import DietPage from "./pages/DietPage";
 import JournalPage from "./pages/JournalPage";
 import BodyPage from "./pages/BodyPage";
 import CommunityPage from "./pages/CommunityPage";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import { AuthProvider } from "./context/AuthContext";
-import DesignMain from "./pages/designa/DesignMain";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ToastProvider } from "./components/ui/Toast";
+import { ConfirmProvider } from "./components/ui/ConfirmProvider";
 import DietAddPage from './pages/DietAddPage';
-// src/App.jsx 상단 import 부분 수정
-import RoutinePlaySelectPage from "./pages/RoutinePlaySelectPage"; // (기존 ExerciseSelectPage)
-import RoutinePlayPage from "./pages/RoutinePlayPage";             // (기존 ExercisePage)
-import RoutinePlanPage from "./pages/RoutinePlanPage";             // (신규 추가!)
+import RoutinePlaySelectPage from "./pages/RoutinePlaySelectPage";
+import RoutinePlayPage from "./pages/RoutinePlayPage";
+import RoutinePlanPage from "./pages/RoutinePlanPage";
 import ProgramPlayPage from "./pages/ProgramPlayPage";
 import WorkoutSummary from "./pages/WorkoutSummary";
 
-const themeStyles = {
-  dark: {
-    bg: "bg-[#0a0a0c]", text: "text-slate-200", subText: "text-slate-500",
-    header: "bg-[#0a0a0c]/80", border: "border-white/5", accent: "text-blue-500",
-    nav: "bg-[#0a0a0c]", card: "bg-[#16161a]", navActive: "text-blue-500", navInactive: "text-slate-600"
-  },
-  white: {
-    bg: "bg-slate-50", text: "text-slate-900", subText: "text-slate-500",
-    header: "bg-white/80", border: "border-slate-200", accent: "text-blue-600",
-    nav: "bg-white", card: "bg-white", navActive: "text-blue-600", navInactive: "text-slate-400"
-  }
+// 루트 경로 분기 — 로그인된 사용자는 /journal, 비로그인은 Landing.
+const RootRoute = () => {
+  const { user } = useAuth();
+  if (user) return <Navigate to="/journal" replace />;
+  return <Landing />;
 };
 
 const AppContent = () => {
   const [theme, setTheme] = useState("dark");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const s = themeStyles[theme];
 
   return (
     <Routes>
-      {/* 1. 디자인 모드 (기존 유지) */}
-      {/* <Route path="/designa/*" element={<DesignMain />} /> */}
-
-      {/* 2. 로그인/회원가입 (내비바 없는 깨끗한 화면) */}
+      {/* 1. 인증 / 표지 — TopNavbar 없는 깨끗한 화면 (Landing 은 자체 슬라이드인 헤더) */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/" element={<RootRoute />} />
 
-      {/* 3. 메인 서비스 영역 */}
+      {/* 2. 메인 서비스 영역 — TopNavbar 가 글로벌 마스트헤드 + 탭 모두 담당 */}
       <Route
         path="*"
         element={
-          <div className={`fixed inset-0 ${s.bg} ${s.text} flex flex-col overflow-hidden`}>
-            {/* 🟢 상단 네비바 고정 */}
-            <TopNavbar s={s} onOpenSettings={() => setSettingsOpen(true)} />
+          <div className="fixed inset-0 bg-surface text-ink flex flex-col overflow-hidden">
+            <TopNavbar onOpenSettings={() => setSettingsOpen(true)} />
             <main className="flex-1 relative overflow-hidden flex justify-center">
               <Routes>
-                <Route path="/" element={<Navigate to="/journal" replace />} />
-
-                {/* 1. 루틴 계획 (새로운 중량 트래커) */}
+                {/* 루틴 계획 */}
                 <Route path="/program" element={<RoutinePlanPage theme={theme} />} />
                 <Route path="/program/play" element={<ProgramPlayPage theme={theme} />} />
                 <Route path="/program/summary" element={<WorkoutSummary theme={theme} />} />
 
-                {/* 2. Form Check (AI 자세 분석) */}
+                {/* Form Check (AI 자세 분석) */}
                 <Route path="/formcheck" element={<RoutinePlaySelectPage theme={theme} />} />
                 <Route path="/formcheck/:exId" element={<RoutinePlayPage theme={theme} />} />
 
@@ -74,9 +62,6 @@ const AppContent = () => {
                 <Route path="/community" element={<CommunityPage theme={theme} />} />
               </Routes>
             </main>
-            {/* 하단 네비바 고정 */}
-            <Navbar s={s} />
-            {/* Settings drawer — 라우트 대신 우측 슬라이드 오버레이 */}
             <SettingsDrawer
               isOpen={settingsOpen}
               onClose={() => setSettingsOpen(false)}
@@ -92,9 +77,13 @@ const AppContent = () => {
 
 const App = () => {
   return (
-    <AuthProvider> {/* 🟢 전역 상태 주머니로 감싸기 */}
+    <AuthProvider>
       <BrowserRouter>
-        <AppContent />
+        <ToastProvider>
+          <ConfirmProvider>
+            <AppContent />
+          </ConfirmProvider>
+        </ToastProvider>
       </BrowserRouter>
     </AuthProvider>
   );

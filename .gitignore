@@ -54,6 +54,9 @@ ios/
 backend/uvicorn.log
 frontend/vite.log
 
+# --- 디자인 / 목업 (개인 참고자료, repo 에 미포함) ---
+frontend/mockup/
+
 # --- OS / 에디터 ---
 .vscode/
 .idea/

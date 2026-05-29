@@ -1,316 +1,419 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios'; // axios가 설치되어 있어야 합니다 (npm install axios)
-import { API_BASE_URL } from '../api/config';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { Plus, RotateCcw, Edit3, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../api/config';
 import NutritionProgressRow from '../components/NutritionProgressRow';
+import PageSurface from '../components/PageSurface';
+import { useToast } from '../components/ui/Toast';
+import { useConfirm } from '../components/ui/ConfirmProvider';
+import usePageTitle from '../hooks/usePageTitle';
 
-const DietPage = () => {
-  const navigate = useNavigate();
+/**
+ * /meals — Daily meals magazine (Editorial Magazine 톤).
+ *
+ * 헤드라인 → Daily target → Entries(아침·점심·저녁 + 간식) 타임라인 → Coach's note.
+ * 한 entry 안에서 개별 항목 X 삭제 / Edit / Record.
+ */
+
+const MEAL_TYPES = [
+  { type: '아침', label: 'Morning' },
+  { type: '점심', label: 'Noon' },
+  { type: '저녁', label: 'Evening' },
+];
+
+const todayMeta = () => {
+  const d = new Date();
+  const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+  const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+  return `${m} ${String(d.getDate()).padStart(2, '0')} · ${dow}`;
+};
+
+const authHeaders = () => {
   const token = localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// ============================================================
+// MealRow — 한 entry(아침/점심/저녁 또는 간식 그룹)
+// ============================================================
+const MealRow = ({ no, label, sublabel, items, onEdit, onReset, onDeleteItem }) => {
+  const hasData = items.length > 0;
+  return (
+    <article className="py-5 border-b border-ink/8 last:border-b-0">
+      <div className="flex items-baseline gap-3 flex-wrap mb-2">
+        <span className="font-display italic text-2xl leading-none text-hint tabular-nums">
+          {no}
+        </span>
+        <span className="font-display text-2xl text-ink leading-tight">
+          {label}
+        </span>
+        <span className="font-mono text-[10px] text-taupe tracking-meta uppercase">
+          · {sublabel}
+        </span>
+        <span className="ml-auto font-mono text-[10px] text-hint tracking-meta uppercase">
+          {hasData ? `${items.length} item${items.length > 1 ? 's' : ''}` : 'Empty'}
+        </span>
+        {hasData && onReset && (
+          <button
+            onClick={onReset}
+            className="font-mono text-[10px] tracking-meta uppercase text-taupe hover:text-accent-red transition-colors"
+            aria-label="초기화"
+          >
+            ↻ Reset
+          </button>
+        )}
+      </div>
+
+      {hasData ? (
+        <ul className="space-y-1 my-3 border-t border-ink/10 pt-2">
+          {items.map((m) => (
+            <li
+              key={m.id}
+              className="flex justify-between items-center py-1.5 group"
+            >
+              <span className="font-display text-[15px] text-body leading-snug">
+                · {m.food_name}
+              </span>
+              <button
+                onClick={() => onDeleteItem(m.id)}
+                className="font-mono text-[11px] text-hint hover:text-accent-red transition-colors opacity-60 md:opacity-0 md:group-hover:opacity-100"
+                aria-label="삭제"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="font-display italic text-sm text-hint mb-3 mt-2">
+          No data recorded.
+        </p>
+      )}
+
+      <button
+        onClick={onEdit}
+        className="font-mono text-[11px] tracking-label uppercase text-accent-red hover:text-ink transition-colors"
+      >
+        {hasData ? '→ Edit entry' : '→ Record entry'}
+      </button>
+    </article>
+  );
+};
+
+// ============================================================
+// DietPage
+// ============================================================
+const DietPage = () => {
+  usePageTitle('Meals · FitCoach');
+
+  const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [summary, setSummary] = useState({ total: { kcal: 0, carbs: 0, protein: 0, fat: 0 }, logs: [] });
   const [me, setMe] = useState(null);
+  const [aiFeedback, setAiFeedback] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
-  const [aiFeedback, setAiFeedback] = useState(""); // AI 답변 저장
-  const [isLoading, setIsLoading] = useState(false); // 로딩 상태
-
-  const getAiFeedback = async () => {
-    setIsLoading(true);
+  const fetchSummary = useCallback(async () => {
+    if (!localStorage.getItem('token')) return;
     try {
-      // /api/v1을 떼고 /ai-feedback을 붙여야 하므로 아래처럼 조합하는 게 안전합니다.
-      const baseUrl = API_BASE_URL.split('/api/v1')[0];
-      const foodData = `칼로리 ${summary?.total?.kcal}kcal, 탄수화물 ${summary?.total?.carbs}g, 단백질 ${summary?.total?.protein}g, 지방 ${summary?.total?.fat}g`;
-      const workoutData = "오늘의 운동 없음"; // 또는 실제 데이터
-
-      const response = await axios.post(`${API_BASE_URL}/ai-feedback`, {
-        type: "TOTAL_DIET",
-        // workout_data: "", // 키 이름 주의 (FastAPI 필드명과 일치)
-        food_data: foodData        // 키 이름 주의
-      });
-
-      setAiFeedback(response.data.feedback);
-    } catch (error) {
-      console.error("AI 피드백 오류:", error);
-      setAiFeedback("피드백을 가져오는데 실패했습니다.");
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-  // 1. 칼로리 데이터가 들어왔고
-  // 2. 이미 피드백을 받은 상태가 아닐 때만 실행 (무한 루프 방지)
-  if (summary?.total?.kcal > 0 && !aiFeedback) { 
-    getAiFeedback(); 
-  }
-}, [summary, aiFeedback]); // summary나 aiFeedback이 변하면 다시 체크해라!
-
-  const fetchSummary = async () => {
-    if (!token) return;
-    try {
-      const res = await axios.get(`${API_BASE_URL}/diet/daily-summary`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await axios.get(`${API_BASE_URL}/diet/daily-summary`, { headers: authHeaders() });
       if (res.data) setSummary(res.data);
-    } catch (err) { console.error("로드 실패", err); }
-  };
+    } catch (err) {
+      console.error('로드 실패', err);
+    }
+  }, []);
 
-  useEffect(() => { fetchSummary(); }, []);
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
-  // 영양 목표 정보 한 번 받아두기 (로그인 상태일 때만)
   useEffect(() => {
-    if (!token) return;
+    if (!localStorage.getItem('token')) return;
     axios
-      .get(`${API_BASE_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .get(`${API_BASE_URL}/user/me`, { headers: authHeaders() })
       .then((res) => setMe(res.data))
       .catch(() => setMe(null));
-  }, [token]);
+  }, []);
+
+  const getAiFeedback = useCallback(async () => {
+    setAiLoading(true);
+    try {
+      const foodData = `칼로리 ${summary?.total?.kcal}kcal, 탄수화물 ${summary?.total?.carbs}g, 단백질 ${summary?.total?.protein}g, 지방 ${summary?.total?.fat}g`;
+      const res = await axios.post(`${API_BASE_URL}/ai-feedback`, {
+        type: 'TOTAL_DIET',
+        food_data: foodData,
+      });
+      setAiFeedback(res.data.feedback);
+    } catch (err) {
+      console.error('AI 피드백 오류:', err);
+      setAiFeedback('피드백을 가져오는데 실패했습니다.');
+    }
+    setAiLoading(false);
+  }, [summary]);
+
+  // 칼로리가 들어왔고 아직 피드백 없으면 자동 1회 호출.
+  useEffect(() => {
+    if (summary?.total?.kcal > 0 && !aiFeedback) {
+      getAiFeedback();
+    }
+  }, [summary, aiFeedback, getAiFeedback]);
 
   const handleReset = async (mealType) => {
-    if (!window.confirm(`${mealType} 기록을 초기화할까요?`)) return;
+    const ok = await confirm({
+      title: `${mealType} 기록을 초기화할까요?`,
+      description: '해당 끼니에 기록된 항목이 모두 삭제됩니다.',
+      confirmLabel: 'Reset',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      await axios.post(`${API_BASE_URL}/diet/record-many`, { meal_type: mealType, items: [] }, 
-      { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post(
+        `${API_BASE_URL}/diet/record-many`,
+        { meal_type: mealType, items: [] },
+        { headers: authHeaders() },
+      );
       fetchSummary();
-    } catch (err) { alert("초기화 실패"); }
+      toast.success(`${mealType} 기록을 초기화했습니다.`);
+    } catch (err) {
+      toast.error('초기화에 실패했습니다.');
+    }
   };
 
-  const fixedMeals = ['아침', '점심', '저녁'].map(type => {
-    const items = (summary?.logs || []).filter(l => l.meal_type === type);
-    return { type, items, hasData: items.length > 0 };
-  });
-
-  const snackGroups = (summary?.logs || [])
-    .filter(l => l.meal_type === '간식')
-    .reduce((acc, log) => {
-      const gid = log.entry_group_id || `snack_${log.id}`;
-      if (!acc[gid]) acc[gid] = [];
-      acc[gid].push(log);
-      return acc;
-    }, {});
-
-  // 개별 아이템 삭제 함수 추가
   const handleDeleteItem = async (itemId) => {
-    if (!window.confirm("이 항목을 삭제할까요?")) return;
+    const ok = await confirm({
+      title: '이 항목을 삭제할까요?',
+      description: '삭제 후 되돌릴 수 없습니다.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      await axios.delete(`${API_BASE_URL}/diet/log/${itemId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchSummary(); // 삭제 후 목록 갱신
+      await axios.delete(`${API_BASE_URL}/diet/log/${itemId}`, { headers: authHeaders() });
+      fetchSummary();
     } catch (err) {
-      alert("삭제 실패");
+      toast.error('삭제에 실패했습니다.');
     }
+  };
+
+  // ---------- Derived ----------
+  const mainMeals = useMemo(
+    () => MEAL_TYPES.map(({ type, label }) => {
+      const items = (summary?.logs || []).filter((l) => l.meal_type === type);
+      return { type, label, items };
+    }),
+    [summary],
+  );
+
+  const snackGroups = useMemo(() => {
+    const groups = (summary?.logs || [])
+      .filter((l) => l.meal_type === '간식')
+      .reduce((acc, log) => {
+        const gid = log.entry_group_id || `snack_${log.id}`;
+        if (!acc[gid]) acc[gid] = [];
+        acc[gid].push(log);
+        return acc;
+      }, {});
+    return Object.entries(groups);
+  }, [summary]);
+
+  const totalEntries =
+    mainMeals.filter((m) => m.items.length > 0).length + snackGroups.length;
+
+  const handleAddSnack = () => {
+    const newGroupId = `snack_${Date.now()}`;
+    navigate(`/meals/add?type=간식&group=${newGroupId}&mode=new`);
   };
 
   return (
-    // 💡 해결: 최상위 컨테이너 구조를 DietAddPage와 완벽하게 일치시킴
-    <div className="fixed inset-0 bg-[#0c0c0e] text-white overflow-y-scroll">      
-      <div className="w-full max-w-6xl mx-auto min-h-screen flex flex-col">
-        
-        {/* 상단 헤더: 수정 페이지와 높이 및 여백 일치 */}
-        <header className="w-full flex justify-between items-center p-6 border-b border-white/5 sticky top-0 bg-[#0c0c0e]/80 backdrop-blur-md z-[100]">
-          <div className="w-6"></div> {/* 여백 밸런스 */}
-          <h2 className="text-[10px] font-black text-blue-500 italic uppercase tracking-[0.3em]">Daily Meals Overview</h2>
-          <div className="w-6"></div>
-        </header>
+    <div
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in fade-in duration-300"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      <PageSurface maxWidth={1100}>
+        <div className="w-full px-6 md:px-12 py-8">
 
-        {/* 메인 컨텐츠 */}
-        <main className="flex-1 p-6 lg:p-10 space-y-10">
+          {/* Headline */}
+          <div className="max-w-[640px] pb-6">
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                — Meals · Today
+              </div>
+              <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                {totalEntries.toString().padStart(2, '0')} entries
+              </div>
+            </div>
+            <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+              Macros, <em className="italic text-accent-gold">accounted for.</em>
+            </h1>
+            <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+              한 끼씩 기록해 두면 일주일 뒤의 자신이 더 정확히 보입니다.
+            </p>
+          </div>
 
-          {/* --- [오늘의 영양 목표] --- */}
-          <section className="bg-[#16161a] rounded-[2.5rem] p-8 border border-white/5">
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em]">오늘의 영양 목표</p>
+          {/* Daily target */}
+          <section className="border-t border-b border-ink/12 py-6 mb-2">
+            <div className="flex items-baseline justify-between mb-5">
+              <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                — Daily target
+              </div>
               {me?.goal && (
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  {me.goal}
+                <span className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                  Goal · {me.goal}
                 </span>
               )}
             </div>
+
             {me?.nutrition ? (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <NutritionProgressRow
-                  label="칼로리"
+                  label="Calories"
                   consumed={summary?.total?.kcal || 0}
                   target={me.nutrition.target_kcal}
                   unit=" kcal"
-                  accent="text-white"
                 />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-3 border-t border-ink/10">
                   <NutritionProgressRow
-                    label="탄수"
+                    label="Carbs"
                     consumed={summary?.total?.carbs || 0}
                     target={me.nutrition.target_carbs}
                     unit="g"
-                    accent="text-blue-400"
                   />
                   <NutritionProgressRow
-                    label="단백"
+                    label="Protein"
                     consumed={summary?.total?.protein || 0}
                     target={me.nutrition.target_protein}
                     unit="g"
-                    accent="text-orange-400"
                   />
                   <NutritionProgressRow
-                    label="지방"
+                    label="Fat"
                     consumed={summary?.total?.fat || 0}
                     target={me.nutrition.target_fat}
                     unit="g"
-                    accent="text-yellow-400"
                   />
                 </div>
-                <p className="text-[10px] text-slate-600 tracking-wider pt-2">
-                  BMR {me.nutrition.bmr} · TDEE {me.nutrition.tdee} kcal 기준
+                <p className="font-mono text-[9px] text-hint tracking-meta uppercase pt-2">
+                  BMR {me.nutrition.bmr} · TDEE {me.nutrition.tdee} kcal
                 </p>
               </div>
             ) : me ? (
-              <p className="text-sm text-slate-400 leading-relaxed">
-                프로필에 <span className="text-orange-400 font-bold">나이</span>가 비어있어 목표 계산이 안 돼요.
-                새 계정으로 회원가입할 때 나이를 입력하면 자동 계산됩니다.
+              <p className="font-display italic text-sm text-body leading-relaxed">
+                프로필에 <span className="not-italic text-accent-gold font-mono text-[11px] tracking-meta uppercase">나이</span>가
+                비어있어 목표 계산이 안 돼요. 회원가입 시 나이를 입력하면 자동 계산됩니다.
               </p>
             ) : (
-              <p className="text-sm text-slate-500">로그인 후 영양 목표가 표시됩니다.</p>
+              <p className="font-display italic text-sm text-hint">
+                로그인 후 영양 목표가 표시됩니다.
+              </p>
             )}
           </section>
 
-          {/* 인공지능 피드백 추가 */}
-          <div className="w-full max-w-6xl mx-auto px-6 pb-20"> {/* 폭은 설정 페이지처럼 5xl로 통일 */}
-            <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 shadow-xl backdrop-blur-md">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-xl font-black text-blue-500 italic uppercase">AI Trainer Feedback</h3>
-                  <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-1">Gemma-3 Powered Analysis</p>
-                </div>
-                <button 
-                  onClick={getAiFeedback}
-                  disabled={isLoading}
-                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black rounded-full transition-all disabled:opacity-50"
-                >
-                  {isLoading ? "ANALYZING..." : "GET FEEDBACK"}
-                </button>
+          {/* Entries timeline */}
+          <section className="pt-8">
+            <div className="flex items-baseline justify-between mb-3">
+              <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                — Entries
               </div>
-
-              {/* 피드백 내용이 나오는 곳 */}
-              <div className="min-h-[80px] flex items-center justify-center border-t border-white/5 pt-6">
-                {aiFeedback ? (
-                  <p className="text-slate-200 text-sm font-medium leading-relaxed italic text-center">
-                    "{aiFeedback}"
-                  </p>
-                ) : (
-                  <p className="text-slate-500 text-xs italic">버튼을 눌러 오늘의 식단 피드백을 받아보세요.</p>
-                )}
+              <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                {todayMeta()}
               </div>
             </div>
-          </div>
 
-          {/* --- [식단 리스트 그리드] --- */}
-          <section className="space-y-8">
-            <div className="flex items-center gap-4">
-              <div className="h-[1px] flex-1 bg-white/5"></div>
-              <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.3em]">Main Meals</span>
-              <div className="h-[1px] flex-1 bg-white/5"></div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {fixedMeals.map((meal) => (
-                <div key={meal.type} className="bg-[#16161a] border border-white/5 rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[180px] group hover:border-blue-500/30 transition-all shadow-lg">
-                  <div>
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full">{meal.type}</span>
-                      {meal.hasData && (
-                        <RotateCcw 
-                          size={14} 
-                          className="text-slate-700 hover:text-red-500 cursor-pointer transition-colors" 
-                          onClick={() => handleReset(meal.type)} 
-                        />
-                      )}
-                    </div>
-                    <p className={`text-lg font-black leading-tight ${meal.hasData ? 'text-white' : 'text-slate-800 italic'}`}>
-                      {meal.hasData ? meal.items.map(m => m.food_name).join(', ') : 'No data recorded'}
-                    </p>
-                  </div>
-                  
-                  <button 
-                    onClick={() => navigate(`/meals/add?type=${meal.type}`)} 
-                    className={`mt-6 w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all ${meal.hasData ? 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20'}`}
-                  >
-                    {meal.hasData ? <><Edit3 size={14} /> Edit</> : <><Plus size={14} /> Record</>}
-                  </button>
-                </div>
+            <div className="border-t border-ink/15">
+              {mainMeals.map((meal, idx) => (
+                <MealRow
+                  key={meal.type}
+                  no={String(idx + 1).padStart(2, '0')}
+                  label={meal.type}
+                  sublabel={meal.label}
+                  items={meal.items}
+                  onEdit={() => navigate(`/meals/add?type=${meal.type}`)}
+                  onReset={() => handleReset(meal.type)}
+                  onDeleteItem={handleDeleteItem}
+                />
               ))}
             </div>
 
-            <div className="flex items-center gap-4 pt-10">
-              <div className="h-[1px] flex-1 bg-white/5"></div>
-              <span className="text-[10px] font-black text-slate-700 uppercase tracking-[0.3em]">Snack Timeline</span>
-              <div className="h-[1px] flex-1 bg-white/5"></div>
+            {/* Snacks subsection */}
+            <div className="flex items-baseline justify-between mt-10 mb-3">
+              <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+                — Snacks
+              </div>
+              <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                {snackGroups.length.toString().padStart(2, '0')} entries
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.entries(snackGroups).map(([groupId, items], idx) => (
-                <div key={groupId} className="bg-[#16161a] border border-orange-500/10 rounded-[2.5rem] p-8 flex flex-col justify-between min-h-[180px] shadow-lg">
-                  <div>
-                    <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest bg-orange-500/10 px-3 py-1 rounded-full mb-4 inline-block">Snack #{idx + 1}</span>
-                    <p className="text-lg font-black text-white leading-tight">{items.map(m => m.food_name).join(', ')}</p>
-                  </div>
-                  <button 
-                    onClick={() => navigate(`/meals/add?type=간식&group=${groupId}`)} 
-                    className="mt-6 w-full py-4 rounded-2xl bg-zinc-800 text-zinc-500 hover:bg-zinc-700 flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest transition-all"
-                  >
-                    <Edit3 size={14} /> Modify
-                  </button>
-                </div>
+            <div className="border-t border-ink/15">
+              {snackGroups.map(([groupId, items], idx) => (
+                <MealRow
+                  key={groupId}
+                  no={String(mainMeals.length + idx + 1).padStart(2, '0')}
+                  label="간식"
+                  sublabel={`Snack ${idx + 1}`}
+                  items={items}
+                  onEdit={() => navigate(`/meals/add?type=간식&group=${groupId}`)}
+                  onDeleteItem={handleDeleteItem}
+                />
               ))}
 
-              {/* 간식 추가 버튼: 카드들과 높이를 맞춰서 일체감 부여 */}
-              <button 
-                onClick={() => {
-                  const newGroupId = `snack_${new Date().getTime()}`; 
-                  navigate(`/meals/add?type=간식&group=${newGroupId}&mode=new`);
-                }}
-                className="min-h-[180px] rounded-[2.5rem] border-2 border-dashed border-white/5 flex flex-col items-center justify-center gap-3 group hover:border-blue-500/50 transition-all"
+              {/* Add new snack */}
+              <button
+                onClick={handleAddSnack}
+                className="w-full flex items-center justify-between py-5 border-b border-ink/8 last:border-b-0 hover:bg-ink/[0.03] transition-colors text-left"
               >
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-blue-500/20 transition-all">
-                  <Plus size={24} className="text-slate-700 group-hover:text-blue-500" />
+                <div className="flex items-baseline gap-3">
+                  <span className="font-display italic text-2xl leading-none text-hint">
+                    +
+                  </span>
+                  <span className="font-display text-xl text-taupe leading-tight">
+                    Add new snack
+                  </span>
                 </div>
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest group-hover:text-blue-500">Add New Snack</span>
+                <span className="font-mono text-[10px] text-hint tracking-meta uppercase">
+                  → New entry
+                </span>
               </button>
             </div>
           </section>
-          {/* 식단 리스트: 개별 삭제 버튼(X) 추가 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {fixedMeals.map((meal) => (
-              <div key={meal.type} className="bg-[#16161a] border border-white/5 rounded-[2rem] p-6 flex flex-col justify-between min-h-[160px]">
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-[9px] font-black text-blue-500 uppercase bg-blue-500/10 px-2 py-1 rounded-md">{meal.type}</span>
-                    {meal.hasData && <RotateCcw size={12} className="text-slate-600 cursor-pointer" onClick={() => handleReset(meal.type)} />}
-                  </div>
-                  
-                  {/* 개별 아이템 리스트와 삭제 버튼 */}
-                  <div className="space-y-2">
-                    {meal.hasData ? meal.items.map(m => (
-                      <div key={m.id} className="flex justify-between items-center bg-white/5 px-3 py-2 rounded-xl group">
-                        <span className="text-sm font-bold text-white">{m.food_name}</span>
-                        <X 
-                          size={14} 
-                          className="text-slate-500 hover:text-red-500 cursor-pointer opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all" 
-                          onClick={() => handleDeleteItem(m.id)}
-                        />
-                      </div>
-                    )) : <p className="text-slate-700 italic text-sm">No record</p>}
-                  </div>
-                </div>
-                <button onClick={() => navigate(`/meals/add?type=${meal.type}`)} className="mt-6 w-full py-3 bg-zinc-800 text-zinc-500 rounded-xl text-[10px] font-black uppercase">
-                  {meal.hasData ? 'Edit' : 'Record'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </main>
 
-        {/* 하단 여백용 푸터 */}
-        <footer className="py-20"></footer>
-      </div>
+          {/* Coach's note (AI feedback) */}
+          <section className="-mx-6 md:-mx-12 px-6 md:px-12 py-6 mt-10 border-y border-ink/15 bg-accent-red/[0.04]">
+            <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+              <div className="font-mono text-[10px] text-accent-red tracking-label uppercase">
+                — Coach's note · Today's macros
+              </div>
+              <button
+                onClick={getAiFeedback}
+                disabled={aiLoading}
+                className="font-mono text-[10px] tracking-label uppercase text-taupe hover:text-ink disabled:opacity-40 transition-colors flex items-center gap-1.5"
+              >
+                {aiLoading && <Loader2 size={10} className="animate-spin" />}
+                {aiLoading ? 'Analyzing…' : '↻ Refresh'}
+              </button>
+            </div>
+
+            {aiFeedback ? (
+              <blockquote className="font-display italic text-lg text-ink leading-relaxed m-0 max-w-[92%]">
+                "{aiFeedback}"
+              </blockquote>
+            ) : aiLoading ? (
+              <p className="font-display italic text-sm text-taupe">
+                Gemma-3 이 오늘의 식단을 분석 중…
+              </p>
+            ) : (
+              <p className="font-display italic text-sm text-hint">
+                기록된 식단이 있으면 자동으로 코멘트가 생성됩니다.
+              </p>
+            )}
+          </section>
+
+          {/* Footer */}
+          <div className="flex justify-between items-center pt-6 mt-10 border-t border-ink/15 font-mono text-[11px] text-hint tracking-meta">
+            <span className="uppercase">— FITCOACH —</span>
+            <span className="uppercase text-taupe">Daily · {todayMeta()}</span>
+          </div>
+        </div>
+      </PageSurface>
     </div>
   );
 };

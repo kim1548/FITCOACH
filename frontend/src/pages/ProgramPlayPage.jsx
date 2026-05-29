@@ -3,13 +3,19 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../api/config';
 import {
-  ChevronLeft, Check, CheckCheck, Clock, Pause, Play, SkipForward,
-  Plus, Minus, Video, Flame, Trophy,
-} from 'lucide-react';
-import {
   LIFT_NAMES_KO, getProgram, resolveSession, resolveExercises,
   computeSetWeight, computeProgression, initialAnchor,
 } from '../programs';
+import PageSurface from '../components/PageSurface';
+import usePageTitle from '../hooks/usePageTitle';
+
+/**
+ * /program/play — 운동 세션 실행 (Editorial Magazine 톤).
+ *
+ * 데이터 / 핸들러 / 진행 로직 / localStorage / 백엔드 POST 그대로 보존.
+ * 시각만 매거진 톤으로 통합 — 큰 serif 세션 라벨 + 모노 라벨 섹션 + hairline 셋 리스트
+ * + accent-red 완료 표시 + accent-gold AMRAP/PR 강조.
+ */
 
 const REST_DEFAULTS_SEC = {
   squat: 180, deadlift: 180,
@@ -34,6 +40,8 @@ const formatRest = (sec) => {
 };
 
 const ProgramPlayPage = ({ theme }) => {
+  usePageTitle('Session · FitCoach');
+
   const navigate = useNavigate();
   const location = useLocation();
   const [programState, setProgramState] = useState(null);
@@ -76,9 +84,7 @@ const ProgramPlayPage = ({ theme }) => {
   const adjustRest = (deltaSec) => {
     setRest(r => {
       if (!r) return r;
-      if (r.paused) {
-        return { ...r, pausedRemaining: r.pausedRemaining + deltaSec };
-      }
+      if (r.paused) return { ...r, pausedRemaining: r.pausedRemaining + deltaSec };
       return { ...r, endsAt: r.endsAt + deltaSec * 1000 };
     });
   };
@@ -118,42 +124,39 @@ const ProgramPlayPage = ({ theme }) => {
     ? (rest.paused ? rest.pausedRemaining : Math.ceil((rest.endsAt - now) / 1000))
     : 0;
 
-  const isDark = theme === 'dark' || theme === 'design';
-  const bgClass = isDark ? 'bg-[#0c0c0e]' : 'bg-slate-50';
-  const textClass = isDark ? 'text-white' : 'text-slate-900';
-  const cardClass = isDark ? 'bg-[#16161a] border-white/5' : 'bg-white border-slate-200 shadow-sm';
-  const subTextClass = isDark ? 'text-slate-400' : 'text-slate-600';
-
   if (!programState) return null;
 
   const program = getProgram(programState);
 
-  // 세션 구현이 아직 없는 프로그램용 안내 화면
+  // 세션 구현이 없는 프로그램용 안내
   if (!program) {
     return (
       <div
-        className={`fixed inset-0 ${bgClass} ${textClass} overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in slide-in-from-right duration-300`}
+        className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in fade-in duration-300"
         style={{ scrollbarWidth: 'none' }}
       >
-        <div className="w-full max-w-3xl mx-auto pt-[80px] pb-[120px] px-6">
-          <button
-            onClick={() => navigate('/program')}
-            className={`mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-              isDark ? 'bg-white/5 hover:bg-white/10 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-            }`}
-          >
-            <ChevronLeft size={16} /> 프로그램 목록
-          </button>
-          <div className={`${cardClass} rounded-[2rem] p-10 border text-center`}>
-            <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-3">
-              {programState.selectedId}
-            </p>
-            <h1 className="text-2xl font-black tracking-tight mb-2">선택한 프로그램 정보를 찾을 수 없습니다</h1>
-            <p className={`text-sm ${subTextClass}`}>
-              프로그램 목록에서 다시 선택해 주세요.
-            </p>
+        <PageSurface maxWidth={1200}>
+          <div className="w-full px-6 md:px-12 py-8">
+            <button
+              onClick={() => navigate('/program')}
+              className="font-mono text-[11px] text-taupe hover:text-ink tracking-meta uppercase mb-8 transition-colors"
+            >
+              ← Program library
+            </button>
+
+            <div className="border-y border-ink/15 py-12 text-center">
+              <div className="font-mono text-[11px] text-accent-red tracking-label uppercase mb-3">
+                {programState.selectedId}
+              </div>
+              <h1 className="font-display text-3xl md:text-4xl text-ink mb-2 tracking-tight">
+                Session not yet authored.
+              </h1>
+              <p className="font-display italic text-sm text-taupe">
+                선택한 프로그램은 아직 세션 정의가 없습니다. 라이브러리에서 다른 프로그램을 골라주세요.
+              </p>
+            </div>
           </div>
-        </div>
+        </PageSurface>
       </div>
     );
   }
@@ -162,7 +165,6 @@ const ProgramPlayPage = ({ theme }) => {
   const nextSession = resolveSession(program, session.id);
   const exercises = resolveExercises(session, programState);
 
-  // 복합 anchorKey(GZCLP·PHUL) 운동의 방어적 폴백 — 보통은 workingWeights 에 존재
   const anchorOf = (ex) => {
     const saved = programState.workingWeights?.[ex.anchorKey];
     if (saved !== undefined) return saved;
@@ -196,7 +198,6 @@ const ProgramPlayPage = ({ theme }) => {
     });
   };
 
-  // AMRAP·PR·여분 반복 세트는 직접 입력해야 하므로 일괄 완료에서 제외
   const completeAllAutoSets = () => {
     setSetData(prev => {
       const next = { ...prev };
@@ -272,7 +273,6 @@ const ProgramPlayPage = ({ theme }) => {
     history.push(historyEntry);
     localStorage.setItem('fiteating.program.history', JSON.stringify(history));
 
-    // 로그인 상태면 백엔드 DB에도 세션 기록을 보낸다 (실패해도 무시 — localStorage가 우선).
     const token = localStorage.getItem('token');
     if (token) {
       axios.post(
@@ -317,71 +317,82 @@ const ProgramPlayPage = ({ theme }) => {
 
   return (
     <div
-      className={`fixed inset-0 ${bgClass} ${textClass} overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in slide-in-from-right duration-300`}
+      className="fixed inset-0 bg-surface text-ink overflow-y-auto [&::-webkit-scrollbar]:hidden animate-in fade-in duration-300"
       style={{ scrollbarWidth: 'none' }}
     >
-      <div className="w-full max-w-3xl mx-auto pt-[80px] pb-[120px] px-6">
+      <PageSurface maxWidth={1200}>
+      <div className="w-full px-6 md:px-12 py-8">
+
+        {/* Back link */}
         <button
           onClick={() => navigate('/program')}
-          className={`mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-            isDark ? 'bg-white/5 hover:bg-white/10 text-slate-400' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-          }`}
+          className="font-mono text-[11px] text-taupe hover:text-ink tracking-meta uppercase mb-6 transition-colors"
         >
-          <ChevronLeft size={16} /> 프로그램 목록
+          ← Program library
         </button>
 
-        <header className="mb-8">
-          <div className="flex items-start justify-between gap-4 mb-1">
-            <div>
-              <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-2">
-                {program.label}{program.variantLabel ? ` · ${program.variantLabel}` : ''}
-              </p>
-              <h1 className="text-3xl md:text-4xl font-black tracking-tighter">
-                {session.label}
-              </h1>
+        {/* Headline */}
+        <header className="pb-6">
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="font-mono text-[11px] text-accent-red tracking-label uppercase">
+              — Session · {session.id}
             </div>
+            <div className="font-mono text-[10px] text-hint tracking-meta uppercase">
+              {program.label}{program.variantLabel ? ` · ${program.variantLabel}` : ''}
+            </div>
+          </div>
+
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <h1 className="font-display text-4xl md:text-5xl leading-[1.0] tracking-tight font-normal">
+              {session.label}
+            </h1>
             <button
               type="button"
               onClick={sessionPausedAt ? resumeSession : pauseSession}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black tabular-nums whitespace-nowrap transition-colors active:scale-95 ${
+              className={`font-mono text-base tabular-nums tracking-meta px-3 py-1.5 border transition-colors ${
                 sessionPausedAt
-                  ? (isDark ? 'bg-white/5 text-slate-500 hover:bg-white/10' : 'bg-slate-100 text-slate-500 hover:bg-slate-200')
-                  : (isDark ? 'bg-white/5 text-blue-400 hover:bg-white/10' : 'bg-blue-50 text-blue-600 hover:bg-blue-100')
+                  ? 'border-ink/15 text-taupe hover:text-ink'
+                  : 'border-accent-gold/40 text-ink'
               }`}
               aria-label={sessionPausedAt ? '운동 재개' : '운동 일시정지'}
             >
-              <Clock size={12} />
-              {formatElapsed(elapsedSec)}
-              {sessionPausedAt ? <Play size={12} /> : <Pause size={12} />}
+              {sessionPausedAt ? '▶' : '⏸'} {formatElapsed(elapsedSec)}
             </button>
           </div>
-          <p className={`text-sm ${subTextClass}`}>
-            {program.desc} 다음 세션은 <span className="font-black text-blue-500">{nextSession.label}</span> 입니다.
-          </p>
 
-          <div className="mt-5 flex justify-end mb-2">
-            <button
-              onClick={completeAllAutoSets}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors ${
-                isDark ? 'bg-blue-600/15 hover:bg-blue-600/30 text-blue-400' : 'bg-blue-100 hover:bg-blue-200 text-blue-600'
-              }`}
-            >
-              <CheckCheck size={14} />
-              전체 완료
-            </button>
-          </div>
-          <div className={`h-1.5 w-full rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-slate-200'}`}>
-            <div
-              className="h-full bg-blue-600 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className={`mt-2 text-[10px] font-black uppercase tracking-widest ${subTextClass}`}>
-            {doneSets} / {totalSets} 세트 · {progress}%
+          <p className="font-display italic text-sm text-taupe mt-3 leading-relaxed">
+            {program.desc} <span className="text-ink not-italic font-mono text-xs tracking-meta uppercase">
+              Next — {nextSession.label}
+            </span>
           </p>
         </header>
 
-        <section className="space-y-5">
+        {/* Progress */}
+        <div className="border-t border-ink/15 pt-4 pb-2">
+          <div className="flex items-baseline justify-between mb-2">
+            <div className="font-mono text-[10px] text-taupe tracking-meta uppercase">
+              Progress
+            </div>
+            <button
+              onClick={completeAllAutoSets}
+              className="font-mono text-[11px] text-accent-gold hover:text-ink tracking-meta uppercase transition-colors"
+            >
+              → Complete autos
+            </button>
+          </div>
+          <div className="h-0.5 w-full bg-ink/10 overflow-hidden">
+            <div
+              className="h-full bg-accent-red transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="font-mono text-[10px] text-hint tracking-meta uppercase mt-2 tabular-nums">
+            {doneSets} / {totalSets} sets · {progress}%
+          </div>
+        </div>
+
+        {/* Exercises */}
+        <section className="mt-6 border-t border-ink/15">
           {exercises.map(ex => {
             const anchor = anchorOf(ex);
             const setWeights = ex.sets.map(spec => computeSetWeight(anchor, spec.pct));
@@ -389,42 +400,46 @@ const ProgramPlayPage = ({ theme }) => {
             const first = ex.sets[0];
             const uniform = ex.sets.every(x => x.pct === first.pct && x.reps === first.reps);
             const schemeText = uniform
-              ? `${ex.sets.length}×${first.reps} · ${topWeight} kg`
-              : `${ex.sets.length}세트 · 최대 ${topWeight} kg`;
+              ? `${ex.sets.length} × ${first.reps} · ${topWeight} kg`
+              : `${ex.sets.length} sets · max ${topWeight} kg`;
             return (
-              <div key={ex.anchorKey} className={`${cardClass} rounded-[2rem] p-6 border`}>
-                <div className="flex items-center justify-between mb-4 gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h2 className="text-2xl font-black tracking-tight truncate">{LIFT_NAMES_KO[ex.liftId]}</h2>
+              <div key={ex.anchorKey} className="py-6 border-b border-ink/8">
+                {/* Exercise header */}
+                <div className="flex items-baseline justify-between gap-3 mb-4 flex-wrap">
+                  <div className="flex items-baseline gap-3 min-w-0">
+                    <h2 className="font-display text-2xl md:text-3xl text-ink leading-tight truncate">
+                      {LIFT_NAMES_KO[ex.liftId]}
+                    </h2>
                     {ex.role && (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                      <span className={`font-mono text-[9px] tracking-label uppercase border px-1.5 py-0.5 flex-shrink-0 ${
                         ex.role === 'T1'
-                          ? 'bg-purple-500/15 text-purple-400'
-                          : isDark ? 'bg-white/10 text-slate-400' : 'bg-slate-200 text-slate-500'
+                          ? 'text-accent-gold border-accent-gold/40'
+                          : 'text-taupe border-ink/15'
                       }`}>
                         {ex.role}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest whitespace-nowrap">
+                  <div className="flex items-baseline gap-4 flex-shrink-0">
+                    <span className="font-mono text-[11px] text-taupe tracking-meta uppercase tabular-nums whitespace-nowrap">
                       {schemeText}
                     </span>
                     <button
                       type="button"
-                      onClick={() => window.open(`/formcheck/${encodeURIComponent(LIFT_NAMES_KO[ex.liftId])}`, '_blank', 'noopener')}
-                      aria-label="자세 분석"
-                      title="자세 분석 (새 탭에서 열기)"
-                      className={`inline-flex items-center justify-center w-7 h-7 rounded-full transition-colors active:scale-95 ${
-                        isDark ? 'bg-white/5 hover:bg-white/10 text-blue-400' : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
-                      }`}
+                      onClick={() =>
+                        window.open(`/formcheck/${encodeURIComponent(LIFT_NAMES_KO[ex.liftId])}`, '_blank', 'noopener')
+                      }
+                      className="font-mono text-[10px] text-accent-gold hover:text-ink tracking-meta uppercase transition-colors"
+                      title="자세 분석 (새 탭)"
                     >
-                      <Video size={12} />
+                      → Form
                     </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {ex.sets.map((spec, i) => {
+
+                {/* Set rows */}
+                <div className="border border-ink/15">
+                  {ex.sets.map((spec, i, arr) => {
                     const key = `${ex.anchorKey}-${i}`;
                     const data = setData[key] || { reps: spec.reps, completed: false };
                     const w = setWeights[i];
@@ -434,47 +449,47 @@ const ProgramPlayPage = ({ theme }) => {
                     const allowsExtra = isAmrap || isPlus;
                     const isDone = data.completed;
                     const isShort = isDone && !allowsExtra && data.reps < spec.reps;
+                    const isHighlight = isDone && (isAmrap || isTop);
 
-                    let rowClass;
-                    let circleClass;
-                    let btnClass;
+                    let rowBg = '';
+                    let circleCls = 'border-ink/20 text-taupe';
+                    let checkBtnCls = 'border-ink/15 text-taupe hover:border-ink/40 hover:text-ink';
+                    let repsTextCls = 'text-ink';
+
                     if (isDone && isShort) {
-                      rowClass = isDark ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-200';
-                      circleClass = 'bg-orange-500 text-white';
-                      btnClass = 'bg-orange-500 text-white';
-                    } else if (isDone && isAmrap) {
-                      rowClass = isDark ? 'bg-purple-500/15 border-purple-500/40' : 'bg-purple-50 border-purple-200';
-                      circleClass = 'bg-purple-500 text-white';
-                      btnClass = 'bg-purple-500 text-white';
-                    } else if (isDone && isTop) {
-                      rowClass = isDark ? 'bg-amber-500/15 border-amber-500/40' : 'bg-amber-50 border-amber-200';
-                      circleClass = 'bg-amber-500 text-white';
-                      btnClass = 'bg-amber-500 text-white';
+                      rowBg = 'bg-accent-red/[0.06]';
+                      circleCls = 'border-accent-red text-accent-red';
+                      checkBtnCls = 'border-accent-red bg-accent-red text-ink';
+                      repsTextCls = 'text-accent-red';
+                    } else if (isHighlight) {
+                      rowBg = 'bg-accent-gold/[0.06]';
+                      circleCls = 'border-accent-gold text-accent-gold';
+                      checkBtnCls = 'border-accent-gold bg-accent-gold text-paper';
+                      repsTextCls = 'text-accent-gold';
                     } else if (isDone) {
-                      rowClass = isDark ? 'bg-blue-600/15 border-blue-500/40' : 'bg-blue-50 border-blue-200';
-                      circleClass = 'bg-blue-600 text-white';
-                      btnClass = 'bg-blue-600 text-white';
-                    } else {
-                      rowClass = isDark ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-200';
-                      circleClass = isDark ? 'bg-white/10 text-slate-300' : 'bg-slate-200 text-slate-600';
-                      btnClass = isDark
-                        ? 'bg-white/10 hover:bg-white/20 text-slate-400'
-                        : 'bg-slate-200 hover:bg-slate-300 text-slate-500';
+                      rowBg = 'bg-accent-red/[0.04]';
+                      circleCls = 'border-accent-red text-accent-red';
+                      checkBtnCls = 'border-accent-red bg-accent-red text-ink';
+                      repsTextCls = 'text-accent-red';
                     }
 
                     return (
                       <div
                         key={i}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-colors ${rowClass}`}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${rowBg} ${
+                          i < arr.length - 1 ? 'border-b border-ink/8' : ''
+                        } transition-colors`}
                       >
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0 ${circleClass}`}>
+                        {/* Set number */}
+                        <span className={`w-6 h-6 flex items-center justify-center border font-mono text-[10px] tabular-nums flex-shrink-0 ${circleCls}`}>
                           {i + 1}
-                        </div>
+                        </span>
 
-                        <div className="flex-1 flex items-center gap-2 text-sm min-w-0">
-                          <span className="font-black">{w}</span>
-                          <span className={`text-xs ${subTextClass}`}>kg</span>
-                          <span className={`text-xs ${subTextClass} mx-1`}>×</span>
+                        {/* Weight × Reps */}
+                        <div className="flex-1 flex items-baseline gap-2 text-sm min-w-0 flex-wrap">
+                          <span className="font-display text-lg text-ink tabular-nums">{w}</span>
+                          <span className="font-mono text-[10px] text-taupe tracking-meta">kg</span>
+                          <span className="font-mono text-[11px] text-hint mx-1">×</span>
                           <input
                             type="number"
                             min="0"
@@ -485,34 +500,34 @@ const ProgramPlayPage = ({ theme }) => {
                               updateReps(ex.anchorKey, i, parseInt(e.target.value, 10) || 0, spec.reps)
                             }
                             style={{ MozAppearance: 'textfield' }}
-                            className={`w-12 rounded-lg px-2 py-1 text-center font-black outline-none border focus:border-blue-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-outer-spin-button]:m-0 ${
-                              isDone ? (isShort ? 'text-orange-500' : isAmrap ? 'text-purple-500' : isTop ? 'text-amber-500' : 'text-blue-500') : ''
-                            } ${isDark ? 'bg-transparent border-white/10' : 'bg-white border-slate-200'}`}
+                            className={`w-12 px-1 py-0.5 text-center font-display text-base tabular-nums bg-paper border border-ink/15 focus:border-accent-red outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${repsTextCls}`}
                           />
-                          <span className={`text-xs ${subTextClass}`}>회</span>
+                          <span className="font-mono text-[10px] text-taupe tracking-meta">reps</span>
 
                           {isAmrap && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-500/15 text-purple-400 ml-1">
-                              <Flame size={10} /> AMRAP
+                            <span className="font-mono text-[9px] text-accent-gold tracking-meta uppercase ml-1">
+                              · AMRAP
                             </span>
                           )}
                           {isTop && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 ml-1">
-                              <Trophy size={10} /> PR
+                            <span className="font-mono text-[9px] text-accent-gold tracking-meta uppercase ml-1">
+                              · PR
                             </span>
                           )}
-
-                          <span className={`text-[10px] ml-auto whitespace-nowrap ${subTextClass}`}>
-                            목표 {spec.reps}{allowsExtra ? '+' : ''}
-                          </span>
                         </div>
 
+                        {/* Target */}
+                        <span className="font-mono text-[9px] text-hint tracking-meta uppercase whitespace-nowrap">
+                          target {spec.reps}{allowsExtra ? '+' : ''}
+                        </span>
+
+                        {/* Check button */}
                         <button
                           onClick={() => toggleSet(ex.anchorKey, i, spec.reps, ex.liftId)}
                           aria-label={isDone ? '완료 취소' : '완료'}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-all active:scale-90 ${btnClass}`}
+                          className={`w-7 h-7 flex items-center justify-center border font-mono text-sm flex-shrink-0 transition-colors ${checkBtnCls}`}
                         >
-                          <Check size={18} />
+                          {isDone ? '✓' : ''}
                         </button>
                       </div>
                     );
@@ -523,74 +538,71 @@ const ProgramPlayPage = ({ theme }) => {
           })}
         </section>
 
+        {/* Rest timer */}
         {rest && (
-          <div
-            className={`mt-8 p-4 rounded-2xl border ${
-              restRemaining > 0
-                ? (isDark ? 'bg-blue-600/10 border-blue-500/30' : 'bg-blue-50 border-blue-200')
-                : (isDark ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-200')
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span
-                className={`text-[10px] font-black uppercase tracking-widest ${
-                  restRemaining > 0 ? 'text-blue-500' : 'text-orange-500'
-                }`}
-              >
-                쉬는 시간 · {LIFT_NAMES_KO[rest.liftId] || rest.liftId}
-              </span>
-              <span
-                className={`text-3xl font-black tabular-nums ${
-                  restRemaining <= 0 ? 'text-orange-500' : ''
-                }`}
-              >
+          <div className={`mt-8 py-5 px-5 border-y ${
+            restRemaining > 0
+              ? 'border-accent-gold/30 bg-accent-gold/[0.04]'
+              : 'border-accent-red/40 bg-accent-red/[0.06]'
+          }`}>
+            <div className="flex items-baseline justify-between mb-4">
+              <div className={`font-mono text-[10px] tracking-label uppercase ${
+                restRemaining > 0 ? 'text-accent-gold' : 'text-accent-red'
+              }`}>
+                — Rest · {LIFT_NAMES_KO[rest.liftId] || rest.liftId}
+              </div>
+              <div className={`font-display text-4xl tabular-nums leading-none ${
+                restRemaining <= 0 ? 'text-accent-red' : 'text-ink'
+              }`}>
                 {formatRest(restRemaining)}
-              </span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-5 flex-wrap font-mono text-[11px] tracking-meta uppercase">
               <button
                 onClick={() => adjustRest(-30)}
-                className={`flex-1 min-w-[64px] inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-black ${
-                  isDark ? 'bg-white/5 hover:bg-white/10 text-slate-200' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
+                className="text-taupe hover:text-ink transition-colors"
               >
-                <Minus size={12} /> 30s
+                − 30s
               </button>
               <button
                 onClick={() => adjustRest(30)}
-                className={`flex-1 min-w-[64px] inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-black ${
-                  isDark ? 'bg-white/5 hover:bg-white/10 text-slate-200' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
+                className="text-taupe hover:text-ink transition-colors"
               >
-                <Plus size={12} /> 30s
+                + 30s
               </button>
               <button
                 onClick={rest.paused ? resumeRest : pauseRest}
-                className={`flex-1 min-w-[64px] inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-black ${
-                  isDark ? 'bg-white/5 hover:bg-white/10 text-slate-200' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
+                className="text-ink hover:text-accent-gold transition-colors"
               >
-                {rest.paused ? <><Play size={12} /> 재개</> : <><Pause size={12} /> 일시정지</>}
+                {rest.paused ? '▶ Resume' : '⏸ Pause'}
               </button>
               <button
                 onClick={skipRest}
-                className={`flex-1 min-w-[64px] inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl text-xs font-black ${
-                  isDark ? 'bg-white/5 hover:bg-white/10 text-slate-200' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
-                }`}
+                className="ml-auto text-taupe hover:text-accent-red transition-colors"
               >
-                <SkipForward size={12} /> 스킵
+                → Skip
               </button>
             </div>
           </div>
         )}
 
+        {/* Finish */}
         <button
           onClick={handleFinish}
-          className="w-full mt-6 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg tracking-wide active:scale-95 transition-all shadow-xl shadow-blue-600/20"
+          className="w-full mt-8 py-4 bg-accent-red text-ink font-mono text-sm tracking-label uppercase hover:bg-accent-red/90 transition-colors"
         >
-          운동 완료
+          → Complete session
         </button>
+
+        {/* Footer */}
+        <div className="flex justify-between items-center pt-6 mt-10 border-t border-ink/15 font-mono text-[11px] text-hint tracking-meta">
+          <span className="uppercase">— FITCOACH —</span>
+          <span className="uppercase text-taupe">
+            {program.label} · {session.label}
+          </span>
+        </div>
       </div>
+      </PageSurface>
     </div>
   );
 };
